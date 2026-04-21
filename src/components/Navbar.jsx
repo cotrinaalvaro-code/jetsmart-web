@@ -47,6 +47,9 @@ function Navbar() {
         <button style={navStyle('/traslados')} onClick={() => navigate('/traslados')}>
           Traslados
         </button>
+        <button style={navStyle('/configuracion')} onClick={() => navigate('/configuracion')}>
+          ⚙️ Config
+        </button>
       </div>
 
       <button

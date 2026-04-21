@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Tripulantes from './pages/Tripulantes'
 import Traslados from './pages/Traslados'
 import Carga from './pages/Carga'
+import Configuracion from './pages/Configuracion'
 import Navbar from './components/Navbar'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/tripulantes" element={<><Navbar /><Tripulantes /></>} />
         <Route path="/traslados" element={<><Navbar /><Traslados /></>} />
         <Route path="/carga" element={<><Navbar /><Carga /></>} />
+        <Route path="/configuracion" element={<><Navbar /><Configuracion /></>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
