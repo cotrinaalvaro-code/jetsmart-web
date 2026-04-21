@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
+import { asignarGrupos } from '../lib/agrupamiento'
 
 const ZONA_CORREDOR = {
   'SMP INGENIERIA': 'NORESTE 2', 'SMP PACIFICO': 'NORTE 5', 'SMP SAN DIEGO': 'NORTE 3',
@@ -39,10 +40,11 @@ const ZONA_CORREDOR = {
   'LA MOLINA RINCONADA': 'ESTE 1', 'LA MOLINA LA PLANICIE': 'ESTE 1',
   'ATE LOS SAUCES': 'ESTE 3', 'ATE SAN GREGORIO': 'ESTE 3', 'ATE MUNICIPAL': 'ESTE 3',
   'SJM CIUDAD DE DIOS': 'PANAMERICANA SUR', 'SJM ALEMANA': 'PANAMERICANA SUR',
-  'SJM PAMPLONA ALTA': 'PANAMERICANA SUR', 'SJM UMAMARCA': 'PANAMERICANA SUR',
+  'SJM PAMPLONA ALTA': 'PANAMERICANA SUR 1', 'SJM UMAMARCA': 'PANAMERICANA SUR',
   'EL AGUSTINO ATARJEA': 'ESTE 4', 'SJL LAS FLORES': 'ESTE 2', 'SJL ZARATE': 'ESTE 2',
   'SJL CANTO GRANDE': 'ESTE 2', 'VENTANILLA MI PERU': 'VENTANILLA',
   'VENTANILLA CENTRO': 'VENTANILLA', 'CIENEGUILLA': 'ESTE 1',
+  'SURCO SURCO VIEJO': 'COSTA VERDE 1',
 }
 
 const horaAMin = (h) => {
@@ -75,22 +77,23 @@ function Carga() {
   const [datos, setDatos] = useState([])
   const [archivo, setArchivo] = useState(null)
   const [cargando, setCargando] = useState(false)
+  const [agrupando, setAgrupando] = useState(false)
   const [mensaje, setMensaje] = useState('')
 
   const procesarTentativo = async (workbook) => {
     const grupos = {}
+    const gruposOrden = {}
+    let grpCounter = 0
     const filasDatos = []
 
     workbook.SheetNames.forEach(nombreHoja => {
       const hoja = workbook.Sheets[nombreHoja]
       const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 })
-
       let hdrRow = -1, colID = -1, colREPT = -1, colCKOUT = -1
       for (let r = 0; r < Math.min(filas.length, 6); r++) {
         const idx = filas[r].indexOf('ID')
         if (idx >= 0) {
-          hdrRow = r
-          colID = idx
+          hdrRow = r; colID = idx
           filas[r].forEach((v, i) => {
             if (v === 'REPT') colREPT = i
             if (v === 'CKOUT') colCKOUT = i
@@ -99,73 +102,60 @@ function Carga() {
         }
       }
       if (hdrRow < 0 || colID < 0 || colREPT < 0) return
-
       const dataStart = hdrRow + 2
       for (let r = dataStart; r < filas.length; r++) {
         const fila = filas[r]
         const rept = String(fila[colREPT] || '').trim()
         const ckout = String(fila[colCKOUT] || '').trim()
         if (!rept || !rept.includes(':')) continue
-
         const key = `${rept}|${ckout}`
         if (!grupos[key]) {
+          grpCounter++
           grupos[key] = { rept, ckout, reptMin: horaAMin(rept), fltE: '', fltS: '' }
+          gruposOrden[key] = grpCounter
         }
-
         const raw0 = String(fila[0] || '').trim()
         const raw1 = String(fila[1] || '').trim().replace('.0', '')
         let fltVal = ''
-        if (raw0.toUpperCase() === 'JZ' && !isNaN(raw1) && raw1) {
-          fltVal = `JZ${raw1}`
-        } else if (raw0.toUpperCase().startsWith('JZ') && raw0.length > 2) {
-          fltVal = raw0.toUpperCase()
-        }
-
+        if (raw0.toUpperCase() === 'JZ' && !isNaN(raw1) && raw1) fltVal = `JZ${raw1}`
+        else if (raw0.toUpperCase().startsWith('JZ') && raw0.length > 2) fltVal = raw0.toUpperCase()
         if (fltVal) {
           let dep = '', arr = ''
           for (let c = 0; c < Math.min(colID, 8); c++) {
             const cv = String(fila[c] || '').trim()
             const parts = cv.split(' ').filter(p =>
-              p.length === 3 && p === p.toUpperCase() &&
-              isNaN(p) && !['JZ','REG','DEP','ARR'].includes(p)
-            )
+              p.length === 3 && p === p.toUpperCase() && isNaN(p) && !['JZ','REG','DEP','ARR'].includes(p))
             parts.forEach(p => { if (!dep) dep = p; else if (!arr) arr = p })
           }
           if (dep === 'LIM' && !grupos[key].fltE) grupos[key].fltE = fltVal
           if (arr === 'LIM') grupos[key].fltS = fltVal
         }
-
         const id = String(fila[colID] || '').replace('.0', '').trim()
         if (id && !isNaN(id) && Number(id) > 1000) {
-          filasDatos.push({ id, rept, ckout, key })
+          filasDatos.push({ id, rept, ckout, key, grpIdx: gruposOrden[key] })
         }
       }
     })
 
     const dnisUnicos = [...new Set(filasDatos.map(f => f.id))]
     setMensaje(`Encontrados ${dnisUnicos.length} tripulantes. Cruzando con BD...`)
-
     const { data: bdDatos } = await supabase
       .from('tripulantes')
       .select('dni, nombre, apellido, cargo, direccion, distrito, lat, lng, telefono')
       .in('dni', dnisUnicos)
-
     const bdMap = {}
     ;(bdDatos || []).forEach(t => { bdMap[t.dni] = t })
 
     const fechaSig = new Date()
     fechaSig.setDate(fechaSig.getDate() + 1)
-
     const filasProcesadas = []
     const dnisVistos = new Set()
 
-    filasDatos.forEach(({ id, rept, ckout, key }) => {
+    filasDatos.forEach(({ id, rept, ckout, key, grpIdx }) => {
       if (dnisVistos.has(`${id}|${key}`)) return
       dnisVistos.add(`${id}|${key}`)
-
       const grupo = grupos[key]
       if (!grupo || (!grupo.fltE && !grupo.fltS)) return
-
       const bd = bdMap[id] || {}
       const nombreCompleto = bd.nombre ? `${bd.nombre} ${bd.apellido}`.trim() : ''
       const dniNombre = `${id}-${nombreCompleto}`
@@ -181,92 +171,44 @@ function Carga() {
       if (grupo.fltE) {
         const hato = calcularHATO(rept, grupo.fltE)
         filasProcesadas.push({
-          uid: `${id}_E_${key}`,
-          activo: true, enBD,
-          col1_dni: id,
-          col2_num: '',
-          col3_fecha: formatFecha(fechaSig),
-          col4_es: 'E',
-          col5_serv: '',
-          col6_hreal: rept,
-          col7_pax: 1,
-          col8_prov: 'Directo Auto',
-          col9_vuelo: grupo.fltE,
-          col10_hato: hato,
-          col11_hrec: '',
-          col12_traslado: '',
-          col13_cat: cargo,
-          col14_nombres: dniNombre,
-          col15_area: 'JETSMART BASE',
-          col16_dir: direccion,
-          col17_dist: distrito,
-          col18_tel: telefono,
-          col19_estado: 'Activo',
-          col20_com: '',
-          col21_lat: lat,
-          col22_lng: lng,
-          col23_grupo: '',
-          col24_orden: '',
-          col25_corredor: corredor,
+          uid: `${id}_E_${key}`, activo: true, enBD, grpIdx, sortKey: grpIdx,
+          col1_dni: id, col2_num: '', col3_fecha: formatFecha(fechaSig),
+          col4_es: 'E', col5_serv: '', col6_hreal: rept,
+          col7_pax: 1, col8_prov: 'Directo Auto', col9_vuelo: grupo.fltE,
+          col10_hato: hato, col11_hrec: '', col12_traslado: '',
+          col13_cat: cargo, col14_nombres: dniNombre,
+          col15_area: 'JETSMART BASE', col16_dir: direccion,
+          col17_dist: distrito, col18_tel: telefono,
+          col19_estado: 'Activo', col20_com: '',
+          col21_lat: lat, col22_lng: lng,
+          col23_grupo: '', col24_orden: '', col25_corredor: corredor,
         })
       }
 
       if (grupo.fltS) {
         let fechaS = new Date(fechaSig)
-        const ckoutMin = horaAMin(ckout)
-        if (ckoutMin <= 110) fechaS.setDate(fechaS.getDate() + 1)
-
+        if (horaAMin(ckout) <= 110) fechaS.setDate(fechaS.getDate() + 1)
         filasProcesadas.push({
-          uid: `${id}_S_${key}`,
-          activo: true, enBD,
-          col1_dni: id,
-          col2_num: '',
-          col3_fecha: formatFecha(fechaS),
-          col4_es: 'S',
-          col5_serv: '',
-          col6_hreal: ckout,
-          col7_pax: 1,
-          col8_prov: 'Directo Auto',
-          col9_vuelo: grupo.fltS,
-          col10_hato: ckout,
-          col11_hrec: '',
-          col12_traslado: '',
-          col13_cat: cargo,
-          col14_nombres: dniNombre,
-          col15_area: 'JETSMART BASE',
-          col16_dir: direccion,
-          col17_dist: distrito,
-          col18_tel: telefono,
-          col19_estado: 'Activo',
-          col20_com: '',
-          col21_lat: lat,
-          col22_lng: lng,
-          col23_grupo: '',
-          col24_orden: '',
-          col25_corredor: corredor,
+          uid: `${id}_S_${key}`, activo: true, enBD, grpIdx, sortKey: grpIdx + 10000,
+          col1_dni: id, col2_num: '', col3_fecha: formatFecha(fechaS),
+          col4_es: 'S', col5_serv: '', col6_hreal: ckout,
+          col7_pax: 1, col8_prov: 'Directo Auto', col9_vuelo: grupo.fltS,
+          col10_hato: ckout, col11_hrec: '', col12_traslado: '',
+          col13_cat: cargo, col14_nombres: dniNombre,
+          col15_area: 'JETSMART BASE', col16_dir: direccion,
+          col17_dist: distrito, col18_tel: telefono,
+          col19_estado: 'Activo', col20_com: '',
+          col21_lat: lat, col22_lng: lng,
+          col23_grupo: '', col24_orden: '', col25_corredor: corredor,
         })
       }
     })
 
-    // Ordenar: primero E por H.ATO, luego S por H.ATO
     filasProcesadas.sort((a, b) => {
-      // Ordenar por reptMin del grupo (hora de presentación)
-  const reptA = horaAMin(a.col6_hreal)
-  const reptB = horaAMin(b.col6_hreal)
-  // Para S, el hreal es CKOUT — necesitamos el REPT original del grupo
-  // E tiene col6_hreal = REPT, S tiene col6_hreal = CKOUT
-  // El grupo se identifica por uid que contiene la key REPT|CKOUT
-  const keyA = a.uid.split('_').slice(2).join('_') // REPT|CKOUT
-  const keyB = b.uid.split('_').slice(2).join('_')
-  const reptGrupoA = horaAMin(keyA.split('|')[0])
-  const reptGrupoB = horaAMin(keyB.split('|')[0])
-
-  if (reptGrupoA !== reptGrupoB) return reptGrupoA - reptGrupoB
-  // Mismo grupo: E (rGrp normal) antes que S (rGrp + 10000)
-  if (a.col4_es !== b.col4_es) return a.col4_es === 'E' ? -1 : 1
-  return horaAMin(a.col10_hato) - horaAMin(b.col10_hato)
-})
-
+      const ha = horaAMin(a.col10_hato), hb = horaAMin(b.col10_hato)
+      if (ha !== hb) return ha - hb
+      return a.sortKey - b.sortKey
+    })
     return filasProcesadas
   }
 
@@ -277,7 +219,6 @@ function Carga() {
     setCargando(true)
     setMensaje('Leyendo archivo...')
     setDatos([])
-
     const reader = new FileReader()
     reader.onload = async (evt) => {
       try {
@@ -285,17 +226,37 @@ function Carga() {
         const resultado = await procesarTentativo(workbook)
         setDatos(resultado)
         const sinBD = resultado.filter(r => !r.enBD).length
-        setMensaje(
-          sinBD > 0
-            ? `✅ ${resultado.length} filas generadas. ⚠️ ${sinBD} DNIs no encontrados en BD.`
-            : `✅ ${resultado.length} filas generadas correctamente.`
-        )
+        setMensaje(sinBD > 0
+          ? `✅ ${resultado.length} filas generadas. ⚠️ ${sinBD} DNIs no encontrados en BD.`
+          : `✅ ${resultado.length} filas generadas correctamente.`)
       } catch (err) {
         setMensaje('Error: ' + err.message)
       }
       setCargando(false)
     }
     reader.readAsBinaryString(file)
+  }
+
+  const handleAgrupar = async () => {
+    setAgrupando(true)
+    setMensaje('Ejecutando agrupamiento...')
+    try {
+      const { data: cfgData } = await supabase.from('configuracion').select('*')
+      const cfg = {}
+      if (cfgData) cfgData.forEach(r => { cfg[r.id] = r.valor })
+      const activos = datos.filter(d => d.activo)
+      const resultado = asignarGrupos(activos, cfg)
+      setDatos(datos.map(d => {
+        const r = resultado.find(r => r.uid === d.uid)
+        return r ? { ...d, ...r } : d
+      }))
+      const gruposE = new Set(resultado.filter(r => r.col4_es === 'E' && r.col23_grupo).map(r => r.col23_grupo))
+      const gruposS = new Set(resultado.filter(r => r.col4_es === 'S' && r.col23_grupo).map(r => r.col23_grupo))
+      setMensaje(`✅ Agrupamiento completado — ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
+    } catch (err) {
+      setMensaje('Error en agrupamiento: ' + err.message)
+    }
+    setAgrupando(false)
   }
 
   const toggleActivo = (uid) => setDatos(datos.map(d => d.uid === uid ? { ...d, activo: !d.activo } : d))
@@ -365,12 +326,18 @@ function Carga() {
           </div>
 
           <div style={{ marginBottom: '24px', textAlign: 'right' }}>
-            <button style={{
-              padding: '12px 32px', background: '#00cc88', color: 'white',
-              border: 'none', borderRadius: '8px', fontWeight: 'bold',
-              fontSize: '16px', cursor: 'pointer'
-            }}>
-              ⚡ Ejecutar Agrupamiento
+            <button
+              onClick={handleAgrupar}
+              disabled={agrupando}
+              style={{
+                padding: '12px 32px',
+                background: agrupando ? '#aab' : '#00cc88',
+                color: 'white', border: 'none', borderRadius: '8px',
+                fontWeight: 'bold', fontSize: '16px',
+                cursor: agrupando ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {agrupando ? 'Agrupando...' : '⚡ Ejecutar Agrupamiento'}
             </button>
           </div>
 
@@ -410,7 +377,7 @@ function Carga() {
                     </td>
                     <td style={{...tdStyle, color: '#aab'}}>{d.col5_serv}</td>
                     <td style={{...tdStyle, color: '#667788'}}>{d.col6_hreal}</td>
-                    <td style={{...tdStyle, color: '#667788', textAlign: 'center'}}>{d.col7_pax}</td>
+                    <td style={{...tdStyle, color: '#1a2235', fontWeight: '600', textAlign: 'center'}}>{d.col7_pax}</td>
                     <td style={{...tdStyle, color: '#667788'}}>{d.col8_prov}</td>
                     <td style={{...tdStyle, color: '#1a2235', fontWeight: '600'}}>{d.col9_vuelo}</td>
                     <td style={{...tdStyle, color: '#1a2235', fontWeight: '600'}}>{d.col10_hato}</td>
@@ -431,8 +398,10 @@ function Carga() {
                     <td style={{...tdStyle, color: '#aab'}}>{d.col20_com}</td>
                     <td style={{...tdStyle, color: '#aab', fontSize: '10px'}}>{d.col21_lat}</td>
                     <td style={{...tdStyle, color: '#aab', fontSize: '10px'}}>{d.col22_lng}</td>
-                    <td style={{...tdStyle, color: '#aab'}}>{d.col23_grupo}</td>
-                    <td style={{...tdStyle, color: '#aab'}}>{d.col24_orden}</td>
+                    <td style={{...tdStyle, color: '#1a2235', fontWeight: '700',
+                      background: d.col23_grupo ? (d.col4_es === 'E' ? '#e8faf4' : '#eef0ff') : 'transparent'
+                    }}>{d.col23_grupo}</td>
+                    <td style={{...tdStyle, color: '#1a2235', fontWeight: '700', textAlign: 'center'}}>{d.col24_orden}</td>
                     <td style={tdStyle}>
                       <input value={d.col25_corredor}
                         onChange={e => editarCorredor(d.uid, e.target.value)}
