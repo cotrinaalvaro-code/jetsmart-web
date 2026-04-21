@@ -38,6 +38,9 @@ function Navbar() {
         <button style={navStyle('/dashboard')} onClick={() => navigate('/dashboard')}>
           Dashboard
         </button>
+        <button style={navStyle('/carga')} onClick={() => navigate('/carga')}>
+          📂 Carga
+        </button>
         <button style={navStyle('/tripulantes')} onClick={() => navigate('/tripulantes')}>
           Tripulantes
         </button>
