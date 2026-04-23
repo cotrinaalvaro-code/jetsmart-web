@@ -12,29 +12,37 @@ function Navbar() {
 
   const navStyle = (path) => ({
     padding: '8px 16px',
-    borderRadius: '8px',
+    borderRadius: '6px',
     cursor: 'pointer',
     border: 'none',
-    background: location.pathname === path ? '#00b4d8' : 'transparent',
-    color: location.pathname === path ? 'white' : '#8899aa',
+    background: location.pathname === path ? '#e3f2fd' : 'transparent',
+    color: location.pathname === path ? '#1565c0' : '#555',
     fontSize: '14px',
-    fontWeight: 'bold'
+    fontWeight: location.pathname === path ? '700' : '500',
+    transition: 'all 0.2s'
   })
 
   return (
     <nav style={{
-      background: '#1a2235',
-      padding: '12px 24px',
+      background: 'white',
+      padding: '0 24px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      borderBottom: '1px solid #2a3a4a'
+      borderBottom: '1px solid #e0e0e0',
+      height: '52px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
     }}>
-      <span style={{ color: '#00b4d8', fontWeight: 'bold', fontSize: '18px' }}>
-        ✈ JetSmart
-      </span>
+      {/* Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '20px' }}>✈</span>
+        <span style={{ color: '#1a2235', fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' }}>
+          Jet<span style={{ color: '#00b4d8' }}>Smart</span>
+        </span>
+      </div>
 
-      <div style={{ display: 'flex', gap: '8px' }}>
+      {/* Nav links */}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
         <button style={navStyle('/dashboard')} onClick={() => navigate('/dashboard')}>
           Dashboard
         </button>
@@ -52,17 +60,18 @@ function Navbar() {
         </button>
       </div>
 
+      {/* Logout */}
       <button
         onClick={handleLogout}
         style={{
-          padding: '8px 16px',
-          background: '#ff444422',
-          border: '1px solid #ff4444',
-          borderRadius: '8px',
-          color: '#ff4444',
+          padding: '7px 16px',
+          background: 'white',
+          border: '1px solid #e53935',
+          borderRadius: '6px',
+          color: '#e53935',
           cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold'
+          fontSize: '13px',
+          fontWeight: '600'
         }}
       >
         Cerrar sesión
