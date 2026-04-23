@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { asignarGrupos } from '../lib/agrupamiento'
+import Mapa from './Mapa'
 
 const ZONA_CORREDOR = {
   'SMP INGENIERIA': 'NORESTE 2', 'SMP PACIFICO': 'NORTE 5', 'SMP SAN DIEGO': 'NORTE 3',
@@ -112,6 +113,20 @@ function Carga() {
   const [agrupando, setAgrupando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [showCols, setShowCols] = useState(false)
+  const [showMapa, setShowMapa] = useState(false)
+  // Escuchar cambios del mapa en ventana separada
+useEffect(() => {
+  const handleStorage = (e) => {
+    if (e.key === 'mapaData') {
+      try {
+        const nuevoDatos = JSON.parse(e.newValue)
+        if (nuevoDatos) setDatos(nuevoDatos)
+      } catch {}
+    }
+  }
+  window.addEventListener('storage', handleStorage)
+  return () => window.removeEventListener('storage', handleStorage)
+}, [])
   const [colsVisibles, setColsVisibles] = useState(() => {
     const v = {}
     COLUMNAS.forEach(c => { v[c.key] = c.default })
@@ -286,7 +301,7 @@ function Carga() {
         setDatos(resultado)
         const sinBD = resultado.filter(r => !r.enBD).length
         setMensaje(sinBD > 0
-          ? `✅ ${resultado.length} filas generadas. ⚠️ ${sinBD} DNIs no encontrados en BD.`
+          ? `✅ ${resultado.length} filas. ⚠️ ${sinBD} sin BD.`
           : `✅ ${resultado.length} filas generadas correctamente.`)
       } catch (err) {
         setMensaje('Error: ' + err.message)
@@ -337,9 +352,9 @@ function Carga() {
       setDatos(resultado)
       const gruposE = new Set(resultado.filter(r => r.col4_es === 'E' && r.col23_grupo).map(r => r.col23_grupo))
       const gruposS = new Set(resultado.filter(r => r.col4_es === 'S' && r.col23_grupo).map(r => r.col23_grupo))
-      setMensaje(`✅ Agrupamiento completado — ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
+      setMensaje(`✅ ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
     } catch (err) {
-      setMensaje('Error en agrupamiento: ' + err.message)
+      setMensaje('Error: ' + err.message)
     }
     setAgrupando(false)
   }
@@ -352,6 +367,7 @@ function Carga() {
   const salidas = datos.filter(d => d.col4_es === 'S').length
   const sinBD = datos.filter(d => !d.enBD).length
   const sinCorredor = datos.filter(d => d.col25_corredor === 'SIN CORREDOR').length
+  const tieneGrupos = datos.some(d => d.col23_grupo)
 
   const thStyle = {
     padding: '9px 8px', color: '#555', textAlign: 'left',
@@ -359,11 +375,13 @@ function Carga() {
     background: 'white', position: 'sticky', top: 0, zIndex: 1, fontWeight: '600'
   }
   const tdStyle = { padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', borderBottom: '1px solid #f0f0f0' }
-
   const col = (key) => colsVisibles[key]
 
   return (
     <div style={{ background: 'white', minHeight: '100vh' }}>
+
+      {/* Mapa overlay */}
+      {showMapa && <Mapa datos={datos} onClose={() => setShowMapa(false)} />}
 
       {/* Header */}
       <div style={{ padding: '12px 24px', borderBottom: '1px solid #e0e0e0' }}>
@@ -378,7 +396,7 @@ function Carga() {
             {mensaje && (
               <span style={{
                 color: mensaje.includes('Error') ? '#e53935' : '#2e7d32',
-                fontWeight: 'bold', fontSize: '12px', maxWidth: '300px'
+                fontWeight: 'bold', fontSize: '12px', maxWidth: '280px'
               }}>{mensaje}</span>
             )}
             <label style={{
@@ -389,6 +407,7 @@ function Carga() {
               {cargando ? 'Procesando...' : '📁 Cargar Tentativo'}
               <input type="file" accept=".xlsx,.xlsm,.xls" onChange={handleArchivo} style={{ display: 'none' }} />
             </label>
+
             {datos.length > 0 && (
               <>
                 <button onClick={handleAgrupar} disabled={agrupando} style={{
@@ -399,6 +418,20 @@ function Carga() {
                   {agrupando ? 'Agrupando...' : '⚡ Ejecutar Agrupamiento'}
                 </button>
 
+                {tieneGrupos && (
+                  <button onClick={() => {
+  localStorage.setItem('mapaData', JSON.stringify(datos))
+  window.open('/mapa', '_blank')
+}}
+style={{
+                    padding: '7px 16px', background: 'white',
+                    border: '1px solid #1565c0', borderRadius: '6px',
+                    fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#1565c0'
+                  }}>
+                    🗺️ Ver Mapa
+                  </button>
+                )}
+
                 {/* Botón Columnas */}
                 <div style={{ position: 'relative' }}>
                   <button onClick={() => setShowCols(!showCols)} style={{
@@ -408,7 +441,6 @@ function Carga() {
                   }}>
                     ⚙️ Columnas
                   </button>
-
                   {showCols && (
                     <div style={{
                       position: 'absolute', right: 0, top: '36px', background: 'white',
@@ -424,24 +456,17 @@ function Carga() {
                           display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '4px 0', cursor: 'pointer', fontSize: '12px', color: '#444'
                         }}>
-                          <input type="checkbox" checked={colsVisibles[c.key]}
-                            onChange={() => toggleCol(c.key)} />
+                          <input type="checkbox" checked={colsVisibles[c.key]} onChange={() => toggleCol(c.key)} />
                           {c.label}
                         </label>
                       ))}
                       <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', display: 'flex', gap: '8px' }}>
-                        <button onClick={() => {
-                          const v = {}
-                          COLUMNAS.forEach(c => { v[c.key] = true })
-                          setColsVisibles(v)
-                        }} style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>
+                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = true }); setColsVisibles(v) }}
+                          style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>
                           Todas
                         </button>
-                        <button onClick={() => {
-                          const v = {}
-                          COLUMNAS.forEach(c => { v[c.key] = c.default })
-                          setColsVisibles(v)
-                        }} style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>
+                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = c.default }); setColsVisibles(v) }}
+                          style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>
                           Default
                         </button>
                       </div>
@@ -456,7 +481,7 @@ function Carga() {
 
       {/* Stats */}
       {datos.length > 0 && (
-        <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0', background: '#fafafa' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0' }}>
           {[
             { label: 'Total', valor: totalFilas, color: '#333' },
             { label: 'Entradas (E)', valor: entradas, color: '#2e7d32' },
