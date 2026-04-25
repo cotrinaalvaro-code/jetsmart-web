@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import * as XLSXStyle from 'xlsx-js-style'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { asignarGrupos } from '../lib/agrupamiento'
-import Mapa from './Mapa'
+import MapaPage from './MapaPage'
 
 const ZONA_CORREDOR = {
   'SMP INGENIERIA': 'NORESTE 2', 'SMP PACIFICO': 'NORTE 5', 'SMP SAN DIEGO': 'NORTE 3',
@@ -107,13 +108,18 @@ const formatFecha = (date) => {
 }
 
 function Carga() {
-  const [datos, setDatos] = useState([])
+  const [datos, setDatos] = useState(() => {
+  try {
+    const raw = localStorage.getItem('cargaData')
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+})
   const [archivo, setArchivo] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [agrupando, setAgrupando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [showCols, setShowCols] = useState(false)
-  const [showMapa, setShowMapa] = useState(false)
+
   // Escuchar cambios del mapa en ventana separada
 useEffect(() => {
   const handleStorage = (e) => {
@@ -132,7 +138,19 @@ useEffect(() => {
     COLUMNAS.forEach(c => { v[c.key] = c.default })
     return v
   })
-
+// Escuchar cambios desde MapaPage
+useEffect(() => {
+  const handleStorage = (e) => {
+    if (e.key === 'mapaData') {
+      try {
+        const nuevoDatos = JSON.parse(e.newValue)
+        if (nuevoDatos) setDatos(nuevoDatos)
+      } catch {}
+    }
+  }
+  window.addEventListener('storage', handleStorage)
+  return () => window.removeEventListener('storage', handleStorage)
+}, [])
   const toggleCol = (key) => setColsVisibles(prev => ({ ...prev, [key]: !prev[key] }))
 
   const procesarTentativo = async (workbook) => {
@@ -358,7 +376,70 @@ useEffect(() => {
     }
     setAgrupando(false)
   }
+// Guardar en localStorage cada vez que datos cambia
+useEffect(() => {
+  localStorage.setItem('cargaData', JSON.stringify(datos))
+}, [datos])
+const exportarExcel = () => {
+  const activos = datos.filter(d => d.activo)
+  const filas = activos.map((d, i) => ([
+    i + 1,           // #
+    d.col3_fecha,    // FECHA
+    d.col4_es,       // E/S
+    d.col5_serv,     // SERV
+    d.col6_hreal,    // H.REAL
+    d.col7_pax,      // PAX
+    d.col8_prov,     // PROV.
+    d.col9_vuelo,    // VUELO
+    d.col10_hato,    // H.ATO
+    d.col11_hrec,    // H.REC.
+    d.col12_traslado,// TRASLD
+    d.col13_cat,     // CAT.
+    d.col14_nombres, // NOMBRES
+    d.col15_area,    // ÁREA
+    d.col16_dir,     // DIRECCION
+    d.col17_dist,    // DISTRITO
+    d.col18_tel,     // TELÉFONO
+    d.col19_estado,  // ESTADO
+    d.col20_com,     // COM.
+    d.col21_lat,     // LAT.
+    d.col22_lng,     // LONG.
+    d.col23_grupo,   // GRUPO
+    d.col24_orden,   // ORDEN
+    d.col25_corredor,// CORREDOR
+    d.col1_dni,      // DNI
+  ]))
 
+  const headers = ['#','FECHA','E/S','SERV','H.REAL','PAX','PROV.','VUELO','H.ATO','H.REC.','TRASLD','CAT.','NOMBRES','ÁREA','DIRECCION','DISTRITO','TELÉFONO','ESTADO','COM.','LAT.','LONG.','GRUPO','ORDEN','CORREDOR','DNI']
+
+  const ws = XLSXStyle.utils.aoa_to_sheet([headers, ...filas])
+
+  // Estilo header
+  headers.forEach((h, i) => {
+    const cell = XLSXStyle.utils.encode_cell({ r: 0, c: i })
+    ws[cell].s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1A2235' } },
+      alignment: { horizontal: 'center' }
+    }
+  })
+
+  // Estilo filas E/S
+  activos.forEach((d, rowIdx) => {
+    const isE = d.col4_es === 'E'
+    const fillColor = isE ? 'E8F5E9' : 'E3F2FD'
+    headers.forEach((h, colIdx) => {
+      const cell = XLSXStyle.utils.encode_cell({ r: rowIdx + 1, c: colIdx })
+      if (ws[cell]) {
+        ws[cell].s = { fill: { fgColor: { rgb: fillColor } } }
+      }
+    })
+  })
+
+  const wb = XLSXStyle.utils.book_new()
+  XLSXStyle.utils.book_append_sheet(wb, ws, 'DataCargaM')
+  XLSXStyle.writeFile(wb, `DataCargaM_${new Date().toISOString().slice(0,10)}.xlsx`)
+}
   const toggleActivo = (uid) => setDatos(datos.map(d => d.uid === uid ? { ...d, activo: !d.activo } : d))
   const editarCorredor = (uid, valor) => setDatos(datos.map(d => d.uid === uid ? { ...d, col25_corredor: valor } : d))
 
@@ -381,7 +462,7 @@ useEffect(() => {
     <div style={{ background: 'white', minHeight: '100vh' }}>
 
       {/* Mapa overlay */}
-      {showMapa && <Mapa datos={datos} onClose={() => setShowMapa(false)} />}
+     
 
       {/* Header */}
       <div style={{ padding: '12px 24px', borderBottom: '1px solid #e0e0e0' }}>
@@ -439,6 +520,13 @@ style={{
                     border: '1px solid #ddd', borderRadius: '6px',
                     fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#555'
                   }}>
+                   <button onClick={exportarExcel} style={{
+  padding: '7px 16px', background: 'white',
+  border: '1px solid #2e7d32', borderRadius: '6px',
+  fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#2e7d32'
+}}>
+  📥 Exportar Excel
+</button>
                     ⚙️ Columnas
                   </button>
                   {showCols && (
