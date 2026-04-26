@@ -81,6 +81,7 @@ function MapaPage() {
   const datosParaVuelos = datosActivos.filter(d => {
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
     if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
+    if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
     return true
   })
   const vuelosConHato = {}
@@ -215,8 +216,11 @@ function MapaPage() {
   }
 
   const resetFiltros = () => {
-    setFiltroVuelo('TODOS'); setFiltroES('TODOS')
-    setFiltroProv('TODOS'); setFiltroHATO('TODOS'); setMoverDesde(null)
+    setFiltroVuelo('TODOS')
+    setFiltroES('TODOS')
+    setFiltroProv('TODOS')
+    setFiltroHATO('TODOS')
+    setMoverDesde(null)
   }
 
   const selectStyle = { padding: '4px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', color: '#333', background: 'white', cursor: 'pointer' }
@@ -234,20 +238,45 @@ function MapaPage() {
 
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Vuelo:</span>
-            <select style={selectStyle} value={filtroVuelo} onChange={e => { setFiltroVuelo(e.target.value); setFiltroHATO('TODOS'); setMoverDesde(null) }}>
+            <select style={selectStyle} value={filtroVuelo} onChange={e => {
+              const vuelo = e.target.value
+              setFiltroVuelo(vuelo)
+              setMoverDesde(null)
+              if (vuelo !== 'TODOS') {
+                const hato = datosActivos.find(d => (d.col9_vuelo || '').trim() === vuelo && (filtroES === 'TODOS' || d.col4_es === filtroES))?.col10_hato
+                if (hato) setFiltroHATO(hato)
+                else setFiltroHATO('TODOS')
+              } else {
+                setFiltroHATO('TODOS')
+              }
+            }}>
               <option value="TODOS">Todos</option>
               {vuelosUnicos.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
 
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>E/S:</span>
-            <select style={selectStyle} value={filtroES} onChange={e => { setFiltroES(e.target.value); setFiltroVuelo('TODOS'); setFiltroHATO('TODOS'); setMoverDesde(null) }}>
+            <select style={selectStyle} value={filtroES} onChange={e => {
+              setFiltroES(e.target.value)
+              setFiltroVuelo('TODOS')
+              setFiltroHATO('TODOS')
+              setFiltroProv('TODOS')
+              setMoverDesde(null)
+            }}>
               <option value="TODOS">Todos</option>
               <option value="E">Entrada</option>
               <option value="S">Salida</option>
             </select>
 
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>H.ATO:</span>
-            <select style={selectStyle} value={filtroHATO} onChange={e => { setFiltroHATO(e.target.value); setMoverDesde(null) }}>
+            <select style={selectStyle} value={filtroHATO} onChange={e => {
+              const hato = e.target.value
+              setFiltroHATO(hato)
+              setMoverDesde(null)
+              if (hato !== 'TODOS' && filtroVuelo === 'TODOS') {
+                const vuelo = datosActivos.find(d => d.col10_hato === hato && (filtroES === 'TODOS' || d.col4_es === filtroES))?.col9_vuelo?.trim()
+                if (vuelo) setFiltroVuelo(vuelo)
+              }
+            }}>
               <option value="TODOS">Todos</option>
               {hatosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
             </select>
