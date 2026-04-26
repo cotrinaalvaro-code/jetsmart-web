@@ -5,6 +5,7 @@ import Tripulantes from './pages/Tripulantes'
 import Traslados from './pages/Traslados'
 import Carga from './pages/Carga'
 import Configuracion from './pages/Configuracion'
+import Corredores from './pages/Corredores'
 import MapaPage from './pages/MapaPage'
 import Navbar from './components/Navbar'
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/traslados" element={<><Navbar /><Traslados /></>} />
         <Route path="/carga" element={<><Navbar /><Carga /></>} />
         <Route path="/configuracion" element={<><Navbar /><Configuracion /></>} />
+        <Route path="/corredores" element={<><Navbar /><Corredores /></>} />
         <Route path="/mapa" element={<MapaPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

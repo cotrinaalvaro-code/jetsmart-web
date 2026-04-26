@@ -13,56 +13,26 @@ L.Icon.Default.mergeOptions({
 const ATO_LAT = -12.0305
 const ATO_LNG = -77.1154
 
-const ZONAS = {
-  'NORTE': ['NORTE 1','NORTE 2','NORTE 3','NORTE 4','NORTE 5','NORESTE 1','NORESTE 2','NORESTE 3','CALLAO 1','CALLAO 2','CALLAO 3','CALLAO NORTE','CALLAO GAMBETA','VENTANILLA'],
-  'CENTRO NORTE': ['CENTRO','CENTRO 1','CENTRO 2','CENTRO 3','AV. ARICA','AV. ARICA 1','AV. ARICA 2','SAN MIGUEL','SAN MIGUEL 1','SAN MIGUEL 2'],
-  'CENTRO SUR': ['VIA EVITAMIENTO','VIA EVITAMIENTO 1','VIA EVITAMIENTO 2'],
-  'COSTA': ['COSTA VERDE','COSTA VERDE 1','COSTA VERDE 2','COSTA VERDE 3'],
-  'SUR': ['PANAMERICANA SUR','PANAMERICANA SUR 1'],
-  'ESTE': ['ESTE','ESTE 1','ESTE 2','ESTE 3','ESTE 4','ESTE 5'],
-}
-
-const ZONA_COLORES = {
-  'NORTE': '#e53935', 'CENTRO NORTE': '#8e24aa', 'CENTRO SUR': '#f9a825',
-  'COSTA': '#43a047', 'SUR': '#00897b', 'ESTE': '#00acc1',
-}
-
-const COLORES_CORREDOR = {
-  'NORTE 1': '#e53935', 'NORTE 2': '#e53935', 'NORTE 3': '#e53935', 'NORTE 4': '#e53935', 'NORTE 5': '#e53935',
-  'NORESTE 1': '#e53935', 'NORESTE 2': '#e53935', 'NORESTE 3': '#e53935',
-  'CALLAO 1': '#e53935', 'CALLAO 2': '#e53935', 'CALLAO 3': '#e53935', 'CALLAO NORTE': '#e53935', 'CALLAO GAMBETA': '#e53935', 'VENTANILLA': '#e53935',
-  'SAN MIGUEL': '#8e24aa', 'SAN MIGUEL 1': '#8e24aa', 'SAN MIGUEL 2': '#8e24aa',
-  'AV. ARICA': '#8e24aa', 'AV. ARICA 1': '#8e24aa', 'AV. ARICA 2': '#8e24aa',
-  'CENTRO': '#8e24aa', 'CENTRO 1': '#8e24aa', 'CENTRO 2': '#8e24aa', 'CENTRO 3': '#8e24aa',
-  'VIA EVITAMIENTO': '#f9a825', 'VIA EVITAMIENTO 1': '#f9a825', 'VIA EVITAMIENTO 2': '#f9a825',
-  'COSTA VERDE': '#43a047', 'COSTA VERDE 1': '#43a047', 'COSTA VERDE 2': '#43a047', 'COSTA VERDE 3': '#43a047',
-  'PANAMERICANA SUR': '#00897b', 'PANAMERICANA SUR 1': '#00897b',
-  'ESTE': '#00acc1', 'ESTE 1': '#00acc1', 'ESTE 2': '#00acc1', 'ESTE 3': '#00acc1', 'ESTE 4': '#00acc1', 'ESTE 5': '#00acc1',
-  'SIN CORREDOR': '#bdbdbd',
-}
-
 const GRUPO_COLORES = [
   '#e53935','#8e24aa','#1e88e5','#43a047','#f9a825','#00acc1','#00897b','#6d4c41',
   '#e91e63','#7b1fa2','#1976d2','#388e3c','#f57f17','#0097a7','#00695c','#5d4037',
 ]
 
-const getGrupoColor = (grp, gruposList) => {
-  const idx = gruposList.indexOf(grp)
-  return GRUPO_COLORES[idx % GRUPO_COLORES.length] || '#888'
-}
-
-const getZona = (corredor) => {
-  const c = (corredor || '').toUpperCase()
-  for (const [zona, corredores] of Object.entries(ZONAS)) {
-    if (corredores.includes(c)) return zona
-  }
-  return null
-}
-
 const horaAMin = (h) => {
   if (!h || !String(h).includes(':')) return 0
   const [hh, mm] = String(h).split(':').map(Number)
   return hh * 60 + mm
+}
+
+const getProv = (pax) => {
+  if (pax >= 4) return 'Directo Van'
+  if (pax === 3) return 'Directo XL'
+  return 'Directo Auto'
+}
+
+const getGrupoColor = (grp, gruposList) => {
+  const idx = gruposList.indexOf(grp)
+  return GRUPO_COLORES[idx % GRUPO_COLORES.length] || '#888'
 }
 
 const crearIconoNumero = (numero, color, size = 24) => L.divIcon({
@@ -82,6 +52,7 @@ function MapaPage() {
   const [filtroVuelo, setFiltroVuelo] = useState('TODOS')
   const [filtroES, setFiltroES] = useState('TODOS')
   const [filtroProv, setFiltroProv] = useState('TODOS')
+  const [filtroHATO, setFiltroHATO] = useState('TODOS')
   const [moverDesde, setMoverDesde] = useState(null)
 
   useEffect(() => {
@@ -106,29 +77,46 @@ function MapaPage() {
 
   const datosActivos = datos.filter(d => d.activo && d.col21_lat && d.col22_lng)
 
-  // Vuelos ordenados por H.ATO
+  // Vuelos ordenados por H.ATO — filtrados por E/S y Prov activos
+  const datosParaVuelos = datosActivos.filter(d => {
+    if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
+    if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
+    return true
+  })
   const vuelosConHato = {}
-  datosActivos.forEach(d => {
+  datosParaVuelos.forEach(d => {
     const v = (d.col9_vuelo || '').trim()
     if (!vuelosConHato[v]) vuelosConHato[v] = horaAMin(d.col10_hato)
     else vuelosConHato[v] = Math.min(vuelosConHato[v], horaAMin(d.col10_hato))
   })
   const vuelosUnicos = Object.entries(vuelosConHato).sort((a, b) => a[1] - b[1]).map(([v]) => v).filter(Boolean)
 
-  // Filtros
-  const datosFiltrados = datosActivos.filter(d => {
+  // Filtros encadenados — cada opción depende de los otros filtros activos
+  const datosParaHATO = datosActivos.filter(d => {
     if (filtroVuelo !== 'TODOS' && (d.col9_vuelo || '').trim() !== filtroVuelo) return false
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
     if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
     return true
   })
+  const hatosUnicos = [...new Set(datosParaHATO.map(d => d.col10_hato).filter(Boolean))]
+    .sort((a, b) => horaAMin(a) - horaAMin(b))
 
   const datosParaProv = datosActivos.filter(d => {
     if (filtroVuelo !== 'TODOS' && (d.col9_vuelo || '').trim() !== filtroVuelo) return false
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
+    if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
     return true
   })
   const provsUnicas = [...new Set(datosParaProv.map(d => d.col8_prov))].filter(Boolean).sort()
+
+  // Datos filtrados final
+  const datosFiltrados = datosActivos.filter(d => {
+    if (filtroVuelo !== 'TODOS' && (d.col9_vuelo || '').trim() !== filtroVuelo) return false
+    if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
+    if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
+    if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
+    return true
+  })
 
   // Grupos filtrados ordenados por H.ATO
   const hatoAnclaGrupo = {}
@@ -149,45 +137,38 @@ function MapaPage() {
   })
   Object.values(grupoMap).forEach(m => m.sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden)))
 
-  // Estadísticas por zona
-  const totalGrupos = new Set(datosActivos.filter(d => d.col23_grupo).map(d => d.col23_grupo)).size
-  const statsZona = {}
-  Object.keys(ZONAS).forEach(z => { statsZona[z] = { grupos: new Set(), pax: 0 } })
-  datosActivos.forEach(d => {
-    const zona = getZona(d.col25_corredor)
-    if (zona && d.col23_grupo) {
-      statsZona[zona].grupos.add(d.col23_grupo)
-      statsZona[zona].pax += parseInt(d.col7_pax) || 1
-    }
-  })
+  const hayFiltroActivo = filtroVuelo !== 'TODOS' || filtroES !== 'TODOS' || filtroProv !== 'TODOS' || filtroHATO !== 'TODOS'
 
-  const hayFiltroActivo = filtroVuelo !== 'TODOS' || filtroES !== 'TODOS' || filtroProv !== 'TODOS'
+  // Recalcular grupo completo
+  const recalcularGrupo = (nuevosDatos, grp, es) => {
+    const miembros = nuevosDatos
+      .filter(x => x.col23_grupo === grp && x.col4_es === es)
+      .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
+    const pax = miembros.length
+    const prov = getProv(pax)
+    return nuevosDatos.map(x => {
+      const idx = miembros.findIndex(m => m.uid === x.uid)
+      if (idx >= 0) return { ...x, col24_orden: idx + 1, col7_pax: pax, col8_prov: prov }
+      return x
+    })
+  }
 
-  // Mover tripulante a grupo existente
   const moverATripulante = (uid, grupoDestino) => {
     const d = datos.find(x => x.uid === uid)
     if (!d || d.col23_grupo === grupoDestino) { setMoverDesde(null); return }
     const grpOrigen = d.col23_grupo
     const es = d.col4_es
     const miembrosDestino = datos.filter(x => x.col23_grupo === grupoDestino && x.col4_es === es)
-    const nuevoPaxDestino = miembrosDestino.length + 1
     let nuevosDatos = datos.map(x => {
-      if (x.uid === uid) return { ...x, col23_grupo: grupoDestino, col24_orden: nuevoPaxDestino, col7_pax: nuevoPaxDestino, col8_prov: nuevoPaxDestino >= 3 ? 'Directo XL' : 'Directo Auto' }
-      if (x.col23_grupo === grupoDestino && x.col4_es === es) return { ...x, col7_pax: nuevoPaxDestino, col8_prov: nuevoPaxDestino >= 3 ? 'Directo XL' : 'Directo Auto' }
+      if (x.uid === uid) return { ...x, col23_grupo: grupoDestino, col24_orden: miembrosDestino.length + 1 }
       return x
     })
-    const restantesOrigen = nuevosDatos.filter(x => x.col23_grupo === grpOrigen && x.col4_es === es)
-      .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
-    nuevosDatos = nuevosDatos.map(x => {
-      const rIdx = restantesOrigen.findIndex(r => r.uid === x.uid)
-      if (rIdx >= 0) return { ...x, col24_orden: rIdx + 1, col7_pax: restantesOrigen.length, col8_prov: restantesOrigen.length >= 3 ? 'Directo XL' : 'Directo Auto' }
-      return x
-    })
+    nuevosDatos = recalcularGrupo(nuevosDatos, grupoDestino, es)
+    nuevosDatos = recalcularGrupo(nuevosDatos, grpOrigen, es)
     sincronizar(nuevosDatos)
     setMoverDesde(null)
   }
 
-  // Mover tripulante a NUEVO grupo
   const moverANuevoGrupo = () => {
     const d = datos.find(x => x.uid === moverDesde.uid)
     if (!d) return
@@ -202,13 +183,7 @@ function MapaPage() {
       if (x.uid === moverDesde.uid) return { ...x, col23_grupo: nuevoGrupo, col24_orden: 1, col7_pax: 1, col8_prov: 'Directo Auto' }
       return x
     })
-    const restantesOrigen = nuevosDatos.filter(x => x.col23_grupo === grpOrigen && x.col4_es === es)
-      .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
-    nuevosDatos = nuevosDatos.map(x => {
-      const rIdx = restantesOrigen.findIndex(r => r.uid === x.uid)
-      if (rIdx >= 0) return { ...x, col24_orden: rIdx + 1, col7_pax: restantesOrigen.length, col8_prov: restantesOrigen.length >= 3 ? 'Directo XL' : 'Directo Auto' }
-      return x
-    })
+    nuevosDatos = recalcularGrupo(nuevosDatos, grpOrigen, es)
     sincronizar(nuevosDatos)
     setMoverDesde(null)
   }
@@ -235,17 +210,14 @@ function MapaPage() {
     const grp = d.col23_grupo
     const es = d.col4_es
     let nuevosDatos = datos.map(x => x.uid === uid ? { ...x, col23_grupo: '', col24_orden: '', col7_pax: 1, col8_prov: 'Directo Auto', activo: false } : x)
-    const restantes = nuevosDatos.filter(x => x.col23_grupo === grp && x.col4_es === es)
-      .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
-    nuevosDatos = nuevosDatos.map(x => {
-      const rIdx = restantes.findIndex(r => r.uid === x.uid)
-      if (rIdx >= 0) return { ...x, col24_orden: rIdx + 1, col7_pax: restantes.length, col8_prov: restantes.length >= 3 ? 'Directo XL' : 'Directo Auto' }
-      return x
-    })
+    nuevosDatos = recalcularGrupo(nuevosDatos, grp, es)
     sincronizar(nuevosDatos)
   }
 
-  const resetFiltros = () => { setFiltroVuelo('TODOS'); setFiltroES('TODOS'); setFiltroProv('TODOS'); setMoverDesde(null) }
+  const resetFiltros = () => {
+    setFiltroVuelo('TODOS'); setFiltroES('TODOS')
+    setFiltroProv('TODOS'); setFiltroHATO('TODOS'); setMoverDesde(null)
+  }
 
   const selectStyle = { padding: '4px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', color: '#333', background: 'white', cursor: 'pointer' }
 
@@ -254,56 +226,46 @@ function MapaPage() {
 
       {/* Header */}
       <div style={{ padding: '7px 16px', borderBottom: '1px solid #e0e0e0', background: 'white' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ minWidth: '110px' }}>
             <h2 style={{ margin: 0, fontSize: '13px', color: '#1a2235' }}>🗺️ Mapa de Traslados</h2>
-            <p style={{ margin: 0, fontSize: '10px', color: '#888' }}>{datosActivos.length} trip. · {totalGrupos} grupos</p>
+            <p style={{ margin: 0, fontSize: '10px', color: '#888' }}>{datosActivos.length} trip. · {gruposFiltrados.length || new Set(datosActivos.filter(d=>d.col23_grupo).map(d=>d.col23_grupo)).size} grupos</p>
           </div>
 
-          {/* Filtros */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#555', fontWeight: '600' }}>Vuelo:</span>
-            <select style={selectStyle} value={filtroVuelo} onChange={e => { setFiltroVuelo(e.target.value); setMoverDesde(null) }}>
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Vuelo:</span>
+            <select style={selectStyle} value={filtroVuelo} onChange={e => { setFiltroVuelo(e.target.value); setFiltroHATO('TODOS'); setMoverDesde(null) }}>
               <option value="TODOS">Todos</option>
               {vuelosUnicos.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
-            <span style={{ fontSize: '11px', color: '#555', fontWeight: '600' }}>E/S:</span>
-            <select style={selectStyle} value={filtroES} onChange={e => { setFiltroES(e.target.value); setMoverDesde(null) }}>
+
+            <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>E/S:</span>
+            <select style={selectStyle} value={filtroES} onChange={e => { setFiltroES(e.target.value); setFiltroVuelo('TODOS'); setFiltroHATO('TODOS'); setMoverDesde(null) }}>
               <option value="TODOS">Todos</option>
               <option value="E">Entrada</option>
               <option value="S">Salida</option>
             </select>
-            <span style={{ fontSize: '11px', color: '#555', fontWeight: '600' }}>Prov.:</span>
+
+            <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>H.ATO:</span>
+            <select style={selectStyle} value={filtroHATO} onChange={e => { setFiltroHATO(e.target.value); setMoverDesde(null) }}>
+              <option value="TODOS">Todos</option>
+              {hatosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
+            </select>
+
+            <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Prov.:</span>
             <select style={selectStyle} value={filtroProv} onChange={e => { setFiltroProv(e.target.value); setMoverDesde(null) }}>
               <option value="TODOS">Todos</option>
               {provsUnicas.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
+
             {hayFiltroActivo && (
-              <button onClick={resetFiltros} style={{ padding: '3px 8px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#555' }}>↺</button>
+              <button onClick={resetFiltros} style={{ padding: '3px 8px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#555' }}>↺ Limpiar</button>
             )}
           </div>
 
-          {/* Zonas compactas en fila */}
-          <div style={{ display: 'flex', gap: '4px', flex: 1, justifyContent: 'center', alignItems: 'center', flexWrap: 'nowrap', overflowX: 'auto' }}>
-            {Object.entries(statsZona).sort((a, b) => b[1].grupos.size - a[1].grupos.size).map(([zona, stat]) => {
-              const pct = totalGrupos > 0 ? Math.round(stat.grupos.size / totalGrupos * 100) : 0
-              const ocup = stat.grupos.size > 0 ? (stat.pax / stat.grupos.size).toFixed(1) : '0'
-              return (
-                <div key={zona} style={{
-                  padding: '3px 8px', borderRadius: '5px', textAlign: 'center',
-                  background: ZONA_COLORES[zona] + '15', border: `1px solid ${ZONA_COLORES[zona]}55`,
-                  whiteSpace: 'nowrap'
-                }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: ZONA_COLORES[zona] }}>{stat.grupos.size}</span>
-                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#555', marginLeft: '4px' }}>{zona}</span>
-                  <span style={{ fontSize: '9px', color: '#999', marginLeft: '3px' }}>{pct}% 🚗{ocup}</span>
-                </div>
-              )
-            })}
-          </div>
+          <div style={{ flex: 1 }} />
 
-          <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>✕ Cerrar</button>
+          <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✕ Cerrar</button>
         </div>
       </div>
 
@@ -326,7 +288,7 @@ function MapaPage() {
           {gruposFiltrados.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: '#888', fontSize: '13px' }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</div>
-              Selecciona un filtro para ver grupos en el panel
+              Selecciona un filtro para ver grupos
             </div>
           ) : (
             gruposFiltrados.map(grp => {
@@ -335,7 +297,6 @@ function MapaPage() {
               const esMoverDestino = moverDesde && moverDesde.grp !== grp
               return (
                 <div key={grp} style={{ borderBottom: '2px solid #e0e0e0', background: esMoverDestino ? '#f0f7ff' : 'white' }}>
-                  {/* Header grupo */}
                   <div style={{
                     padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '8px',
                     background: color + '18', borderBottom: '1px solid ' + color + '33',
@@ -348,20 +309,12 @@ function MapaPage() {
                     {esMoverDestino && <span style={{ fontSize: '11px', color: '#1565c0', fontWeight: '700' }}>← aquí</span>}
                   </div>
 
-                  {/* Tripulantes */}
                   {miembros.map((d, idx) => {
                     const nombre = d.col14_nombres?.split('-').slice(1).join('-') || d.col14_nombres
                     const esMover = moverDesde?.uid === d.uid
                     return (
-                      <div key={d.uid} style={{
-                        padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '6px',
-                        background: esMover ? '#fff8e1' : 'white', borderBottom: '1px solid #f5f5f5'
-                      }}>
-                        <div style={{
-                          width: '20px', height: '20px', borderRadius: '50%', background: color,
-                          color: 'white', fontWeight: '800', display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', fontSize: '10px', flexShrink: 0
-                        }}>{d.col24_orden}</div>
+                      <div key={d.uid} style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '6px', background: esMover ? '#fff8e1' : 'white', borderBottom: '1px solid #f5f5f5' }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: color, color: 'white', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', flexShrink: 0 }}>{d.col24_orden}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '11px', fontWeight: '600', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</div>
                           <div style={{ fontSize: '10px', color: '#888' }}>{d.col13_cat} · {d.col17_dist}</div>
@@ -372,7 +325,6 @@ function MapaPage() {
                           <button onClick={() => moverOrden(d.uid, 1)} disabled={idx === miembros.length - 1}
                             style={{ padding: '1px 4px', fontSize: '10px', border: '1px solid #ddd', borderRadius: '3px', background: 'white', cursor: idx === miembros.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === miembros.length - 1 ? 0.3 : 1 }}>▼</button>
                           <button onClick={() => moverDesde?.uid === d.uid ? setMoverDesde(null) : setMoverDesde({ uid: d.uid, grp, nombre })}
-                            title="Mover a otro grupo"
                             style={{ padding: '1px 4px', fontSize: '10px', border: `1px solid ${esMover ? '#f57f17' : '#1565c0'}`, borderRadius: '3px', background: esMover ? '#fff8e1' : 'white', cursor: 'pointer', color: esMover ? '#f57f17' : '#1565c0' }}>↔</button>
                           <button onClick={() => eliminarDelGrupo(d.uid)}
                             style={{ padding: '1px 4px', fontSize: '10px', border: '1px solid #e53935', borderRadius: '3px', background: 'white', cursor: 'pointer', color: '#e53935' }}>✕</button>
@@ -389,11 +341,16 @@ function MapaPage() {
         {/* Mapa */}
         <div style={{ flex: 1 }}>
           <MapContainer center={[ATO_LAT, ATO_LNG]} zoom={hayFiltroActivo ? 12 : 11}
-            style={{ width: '100%', height: '100%' }} key={filtroVuelo + filtroES + filtroProv}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
+            style={{ width: '100%', height: '100%' }} key={filtroVuelo + filtroES + filtroProv + filtroHATO}>
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+              keepBuffer={4}
+            />
             <Marker position={[ATO_LAT, ATO_LNG]} icon={iconoATO}>
               <Popup><strong>✈️ Aeropuerto Jorge Chávez</strong></Popup>
             </Marker>
+
             {datosFiltrados.map(d => {
               const lat = parseFloat(d.col21_lat)
               const lng = parseFloat(d.col22_lng)
@@ -417,11 +374,19 @@ function MapaPage() {
                 </Marker>
               )
             })}
+
             {Object.entries(grupoMap).map(([grp, miembros]) => {
               const color = getGrupoColor(grp, gruposFiltrados)
-              const pts = miembros.filter(d => d.col21_lat && d.col22_lng)
+              const esS = miembros[0]?.col4_es === 'S'
+              // Para S: ATO → orden 1 (más cercano) → orden 2 → orden N (más lejano)
+              // Para E: orden 1 (más lejano) → orden 2 → orden N → ATO
+              const puntosOrdenados = miembros
+                .filter(d => d.col21_lat && d.col22_lng)
+                .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
                 .map(d => [parseFloat(d.col21_lat), parseFloat(d.col22_lng)])
-              pts.push([ATO_LAT, ATO_LNG])
+              const pts = esS
+                ? [[ATO_LAT, ATO_LNG], ...puntosOrdenados]
+                : [...puntosOrdenados, [ATO_LAT, ATO_LNG]]
               return <Polyline key={grp} positions={pts} color={color}
                 weight={hayFiltroActivo ? 2.5 : 1.5} opacity={hayFiltroActivo ? 0.7 : 0.3}
                 dashArray={hayFiltroActivo ? undefined : '4 4'} />

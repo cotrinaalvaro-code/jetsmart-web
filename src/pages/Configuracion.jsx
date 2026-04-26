@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const GRUPOS = [
@@ -25,6 +26,7 @@ const GRUPOS = [
 ]
 
 function Configuracion() {
+  const navigate = useNavigate()
   const [config, setConfig] = useState({})
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -131,19 +133,19 @@ function Configuracion() {
   }
 
   if (loading) return (
-    <div style={{ padding: '32px', background: '#f4f6f9', minHeight: '100vh' }}>
+    <div style={{ padding: '32px', background: 'white', minHeight: '100vh' }}>
       <p style={{ color: '#667788' }}>Cargando configuración...</p>
     </div>
   )
 
   return (
-    <div style={{ padding: '32px', background: '#f4f6f9', minHeight: '100vh' }}>
+    <div style={{ padding: '32px', background: 'white', minHeight: '100vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
           <h2 style={{ color: '#1a2235', marginBottom: '4px' }}>⚙️ Configuración</h2>
           <p style={{ color: '#667788' }}>Parámetros del algoritmo de agrupamiento</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {mensaje && (
             <span style={{
               color: mensaje.includes('✅') ? '#00aa66' : '#ff4444',
