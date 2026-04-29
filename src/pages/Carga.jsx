@@ -621,9 +621,9 @@ function Carga() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats + Resumen en la misma fila */}
       {datos.length > 0 && (
-        <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e0e0e0', flexWrap: 'wrap' }}>
           {[
             { label: 'Total', valor: totalFilas, color: '#333' },
             { label: 'Entradas (E)', valor: entradas, color: '#2e7d32' },
@@ -637,13 +637,12 @@ function Carga() {
               <div style={{ color: '#888', fontSize: '11px' }}>{stat.label}</div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Resumen Agrupamiento — aparece solo después de ejecutar agrupamiento */}
-      {resumenData && (
-        <div style={{ padding: '10px 24px', background: '#f8faff', borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ResumenAgrupamiento resumen={resumenData} />
+          {/* Resumen Agrupamiento — aparece solo después de ejecutar agrupamiento */}
+          {resumenData && (
+            <div style={{ padding: '8px 20px', display: 'flex', alignItems: 'center', flex: 1 }}>
+              <ResumenAgrupamiento resumen={resumenData} />
+            </div>
+          )}
         </div>
       )}
 
