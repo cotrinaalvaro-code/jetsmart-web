@@ -81,7 +81,6 @@ const COLUMNAS = [
   { key: 'bd', label: 'BD', default: true },
 ]
 
-// Columnas que tienen filtro dropdown
 const COLS_CON_FILTRO = ['es', 'vuelo', 'hato', 'prov', 'grupo', 'corredor', 'cat', 'dist']
 
 const horaAMin = (h) => {
@@ -121,13 +120,29 @@ const sortearDatos = (arr) => [...arr].sort((a, b) => {
   return (parseInt(a.col24_orden) || 0) - (parseInt(b.col24_orden) || 0)
 })
 
+// ── Calcula SERV igual que la macro NumerarFilas ──────────────────────────────
+const numerarServ = (filas) => {
+  let servNum = 0
+  const grpServMap = {}
+  return filas.map((f, i) => {
+    const num = i + 1
+    const grpVal = f.col23_grupo || ''
+    let serv = ''
+    if (grpVal) {
+      if (grpServMap[grpVal] === undefined) {
+        servNum++
+        grpServMap[grpVal] = servNum
+      }
+      serv = grpServMap[grpVal]
+    }
+    return { ...f, col2_num: num, col5_serv: serv }
+  })
+}
+
 function ColHeader({ label, colKey, datos, filtros, setFiltros }) {
   const [open, setOpen] = useState(false)
-
   const tieneFiltro = COLS_CON_FILTRO.includes(colKey)
   const filtroActivo = filtros[colKey] && filtros[colKey] !== ''
-
-  // Valores únicos para el dropdown
   const colMap = {
     es: 'col4_es', vuelo: 'col9_vuelo', hato: 'col10_hato',
     prov: 'col8_prov', grupo: 'col23_grupo', corredor: 'col25_corredor',
@@ -137,51 +152,31 @@ function ColHeader({ label, colKey, datos, filtros, setFiltros }) {
   const valoresUnicos = campo
     ? [...new Set(datos.map(d => d[campo]).filter(Boolean))].sort()
     : []
-
   const handleSelect = (val) => {
     setFiltros(prev => ({ ...prev, [colKey]: val }))
     setOpen(false)
   }
-
   return (
     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px', width: '100%' }}>
       <span>{label}</span>
       {tieneFiltro && (
         <>
-          <span
-            onClick={e => { e.stopPropagation(); setOpen(!open) }}
-            style={{
-              cursor: 'pointer', fontSize: '9px',
-              color: filtroActivo ? '#1565c0' : '#aaa',
-              fontWeight: filtroActivo ? '800' : '400'
-            }}
-          >▼</span>
+          <span onClick={e => { e.stopPropagation(); setOpen(!open) }}
+            style={{ cursor: 'pointer', fontSize: '9px', color: filtroActivo ? '#1565c0' : '#aaa', fontWeight: filtroActivo ? '800' : '400' }}>▼</span>
           {filtroActivo && (
-            <span
-              onClick={e => { e.stopPropagation(); setFiltros(prev => ({ ...prev, [colKey]: '' })) }}
-              style={{ cursor: 'pointer', color: '#e53935', fontSize: '9px', fontWeight: '800' }}
-            >✕</span>
+            <span onClick={e => { e.stopPropagation(); setFiltros(prev => ({ ...prev, [colKey]: '' })) }}
+              style={{ cursor: 'pointer', color: '#e53935', fontSize: '9px', fontWeight: '800' }}>✕</span>
           )}
           {open && (
-            <div style={{
-              position: 'absolute', top: '20px', left: 0, background: 'white',
-              border: '1px solid #e0e0e0', borderRadius: '6px', zIndex: 999,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.15)', minWidth: '150px',
-              maxHeight: '220px', overflowY: 'auto'
-            }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div
-                onClick={() => handleSelect('')}
-                style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '11px', color: '#555', borderBottom: '1px solid #f0f0f0', background: !filtros[colKey] ? '#e3f2fd' : 'white' }}
-              >
+            <div style={{ position: 'absolute', top: '20px', left: 0, background: 'white', border: '1px solid #e0e0e0', borderRadius: '6px', zIndex: 999, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', minWidth: '150px', maxHeight: '220px', overflowY: 'auto' }}
+              onClick={e => e.stopPropagation()}>
+              <div onClick={() => handleSelect('')}
+                style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '11px', color: '#555', borderBottom: '1px solid #f0f0f0', background: !filtros[colKey] ? '#e3f2fd' : 'white' }}>
                 (Todos)
               </div>
               {valoresUnicos.map(v => (
-                <div key={v}
-                  onClick={() => handleSelect(v)}
-                  style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '11px', color: '#333', borderBottom: '1px solid #f5f5f5', background: filtros[colKey] === v ? '#e3f2fd' : 'white' }}
-                >
+                <div key={v} onClick={() => handleSelect(v)}
+                  style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '11px', color: '#333', borderBottom: '1px solid #f5f5f5', background: filtros[colKey] === v ? '#e3f2fd' : 'white' }}>
                   {v}
                 </div>
               ))}
@@ -253,7 +248,6 @@ function Carga() {
     }
   }
 
-  // Aplicar filtros
   const datosMostrados = datos.filter(d => {
     if (filtros.es && d.col4_es !== filtros.es) return false
     if (filtros.vuelo && d.col9_vuelo !== filtros.vuelo) return false
@@ -428,6 +422,7 @@ function Carga() {
     setMensaje('Leyendo archivo...')
     setDatos([])
     setFiltros({})
+    setResumenData(null)
     const reader = new FileReader()
     reader.onload = async (evt) => {
       try {
@@ -454,9 +449,11 @@ function Carga() {
       const { data: cfgData } = await supabase.from('configuracion').select('*')
       const cfg = {}
       if (cfgData) cfgData.forEach(r => { cfg[r.id] = r.valor })
+
       const activos = datos.filter(d => d.activo)
       const resultado = asignarGrupos(activos, cfg)
 
+      // Calcular _hatoSort para ordenamiento
       const hatoAnclaMap = {}
       resultado.forEach(r => {
         if (r.col4_es === 'E' && parseInt(r.col24_orden) === 1) {
@@ -475,21 +472,29 @@ function Carga() {
           : (hatoEporDNI[r.col1_dni] || r.col10_hato)
       })
 
-      setDatos(sortearDatos(resultado))
-      const datosOrdenados = sortearDatos(resultado)
-      setDatos(datosOrdenados)
-      const gruposE = new Set(resultado.filter(r => r.col4_es === 'E' && r.col23_grupo).map(r => r.col23_grupo))
-      const gruposS = new Set(resultado.filter(r => r.col4_es === 'S' && r.col23_grupo).map(r => r.col23_grupo))
-      setMensaje(`✅ ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
-      setResumenData(calcularResumen(resultado.map(r => ({
+      // Ordenar y numerar # y SERV (igual que macro NumerarFilas)
+      const ordenados = sortearDatos(resultado)
+      const conNumeros = numerarServ(ordenados)
+
+      // Contar grupos
+      const gruposE = new Set(conNumeros.filter(r => r.col4_es === 'E' && r.col23_grupo).map(r => r.col23_grupo))
+      const gruposS = new Set(conNumeros.filter(r => r.col4_es === 'S' && r.col23_grupo).map(r => r.col23_grupo))
+
+      // Calcular resumen (igual que hoja RESUMEN del Excel)
+      const resumen = calcularResumen(conNumeros.map(r => ({
         es:       r.col4_es,
         vuelo:    r.col9_vuelo,
         pax:      r.col7_pax,
         prov:     r.col8_prov,
-        orden:    r.col24_orden,
-        serv:     r.col5_serv,
+        orden:    Number(r.col24_orden) || 0,
+        serv:     Number(r.col5_serv)  || 0,
         corredor: r.col25_corredor,
-      }))))
+      })))
+
+      setDatos(conNumeros)
+      setResumenData(resumen)
+      setMensaje(`✅ ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
+
     } catch (err) {
       setMensaje('Error: ' + err.message)
     }
@@ -545,6 +550,7 @@ function Carga() {
 
   return (
     <div style={{ background: 'white', minHeight: '100vh' }} onClick={() => setShowCols(false)}>
+
       {/* Header */}
       <div style={{ padding: '12px 24px', borderBottom: '1px solid #e0e0e0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -560,29 +566,35 @@ function Carga() {
             </label>
             {datos.length > 0 && (
               <>
-                <button onClick={handleAgrupar} disabled={agrupando} style={{ padding: '7px 16px', background: agrupando ? '#aaa' : '#00cc88', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: agrupando ? 'not-allowed' : 'pointer' }}>
+                <button onClick={handleAgrupar} disabled={agrupando}
+                  style={{ padding: '7px 16px', background: agrupando ? '#aaa' : '#00cc88', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: agrupando ? 'not-allowed' : 'pointer' }}>
                   {agrupando ? 'Agrupando...' : '⚡ Ejecutar Agrupamiento'}
                 </button>
                 {tieneGrupos && (
-                  <button onClick={() => { localStorage.setItem('mapaData', JSON.stringify(datos)); window.open('/mapa', '_blank') }} style={{ padding: '7px 16px', background: 'white', border: '1px solid #1565c0', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#1565c0' }}>
+                  <button onClick={() => { localStorage.setItem('mapaData', JSON.stringify(datos)); window.open('/mapa', '_blank') }}
+                    style={{ padding: '7px 16px', background: 'white', border: '1px solid #1565c0', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#1565c0' }}>
                     🗺️ Ver Mapa
                   </button>
                 )}
                 {tieneGrupos && (
-                  <button onClick={exportarExcel} style={{ padding: '7px 16px', background: 'white', border: '1px solid #2e7d32', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#2e7d32' }}>
+                  <button onClick={exportarExcel}
+                    style={{ padding: '7px 16px', background: 'white', border: '1px solid #2e7d32', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#2e7d32' }}>
                     📥 Exportar Excel
                   </button>
                 )}
                 {filtrosActivos && (
-                  <button onClick={() => setFiltros({})} style={{ padding: '7px 16px', background: 'white', border: '1px solid #f57f17', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#f57f17' }}>
+                  <button onClick={() => setFiltros({})}
+                    style={{ padding: '7px 16px', background: 'white', border: '1px solid #f57f17', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#f57f17' }}>
                     ↺ Limpiar filtros
                   </button>
                 )}
-                <button onClick={limpiarDatos} style={{ padding: '7px 16px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#e53935' }}>
+                <button onClick={limpiarDatos}
+                  style={{ padding: '7px 16px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#e53935' }}>
                   🗑️ Limpiar
                 </button>
                 <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setShowCols(!showCols)} style={{ padding: '7px 16px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#555' }}>
+                  <button onClick={() => setShowCols(!showCols)}
+                    style={{ padding: '7px 16px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#555' }}>
                     ⚙️ Columnas
                   </button>
                   {showCols && (
@@ -595,8 +607,10 @@ function Carga() {
                         </label>
                       ))}
                       <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = true }); localStorage.setItem('colsVisibles', JSON.stringify(v)); setColsVisibles(v) }} style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>Todas</button>
-                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = c.default }); localStorage.setItem('colsVisibles', JSON.stringify(v)); setColsVisibles(v) }} style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>Default</button>
+                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = true }); localStorage.setItem('colsVisibles', JSON.stringify(v)); setColsVisibles(v) }}
+                          style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>Todas</button>
+                        <button onClick={() => { const v = {}; COLUMNAS.forEach(c => { v[c.key] = c.default }); localStorage.setItem('colsVisibles', JSON.stringify(v)); setColsVisibles(v) }}
+                          style={{ fontSize: '11px', padding: '3px 8px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px', background: 'white' }}>Default</button>
                       </div>
                     </div>
                   )}
@@ -626,7 +640,7 @@ function Carga() {
         </div>
       )}
 
-      {/* Resumen Agrupamiento */}
+      {/* Resumen Agrupamiento — aparece solo después de ejecutar agrupamiento */}
       {resumenData && (
         <div style={{ padding: '10px 24px', background: '#f8faff', borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <ResumenAgrupamiento resumen={resumenData} />
@@ -676,7 +690,7 @@ function Carga() {
                   {col('num') && <td style={{...tdStyle, color: '#aaa'}}>{d.col2_num}</td>}
                   {col('fecha') && <td style={{...tdStyle, color: '#555'}}>{d.col3_fecha}</td>}
                   {col('es') && <td style={tdStyle}><span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', background: d.col4_es === 'E' ? '#e8f5e9' : '#e3f2fd', color: d.col4_es === 'E' ? '#2e7d32' : '#1565c0' }}>{d.col4_es}</span></td>}
-                  {col('serv') && <td style={{...tdStyle, color: '#aaa'}}>{d.col5_serv}</td>}
+                  {col('serv') && <td style={{...tdStyle, color: '#555', fontWeight: '600', textAlign: 'center'}}>{d.col5_serv}</td>}
                   {col('hreal') && <td style={{...tdStyle, color: '#555'}}>{d.col6_hreal}</td>}
                   {col('pax') && <td style={{...tdStyle, color: '#333', fontWeight: '600', textAlign: 'center'}}>{d.col7_pax}</td>}
                   {col('prov') && <td style={{...tdStyle, color: '#555'}}>{d.col8_prov}</td>}
