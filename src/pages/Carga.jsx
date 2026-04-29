@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import * as XLSXStyle from 'xlsx-js-style'
 import { supabase } from '../lib/supabase'
 import { asignarGrupos } from '../lib/agrupamiento'
+import ResumenAgrupamiento, { calcularResumen } from '../components/ResumenAgrupamiento'
 
 const ZONA_CORREDOR = {
   'SMP INGENIERIA': 'NORESTE 2', 'SMP PACIFICO': 'NORTE 5', 'SMP SAN DIEGO': 'NORTE 3',
@@ -203,6 +204,7 @@ function Carga() {
   const [archivo, setArchivo] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [agrupando, setAgrupando] = useState(false)
+  const [resumenData, setResumenData] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [showCols, setShowCols] = useState(false)
   const [filtros, setFiltros] = useState({})
@@ -473,9 +475,20 @@ function Carga() {
       })
 
       setDatos(sortearDatos(resultado))
+      const datosOrdenados = sortearDatos(resultado)
+      setDatos(datosOrdenados)
       const gruposE = new Set(resultado.filter(r => r.col4_es === 'E' && r.col23_grupo).map(r => r.col23_grupo))
       const gruposS = new Set(resultado.filter(r => r.col4_es === 'S' && r.col23_grupo).map(r => r.col23_grupo))
       setMensaje(`✅ ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
+      setResumenData(calcularResumen(resultado.map(r => ({
+        es:       r.col4_es,
+        vuelo:    r.col9_vuelo,
+        pax:      r.col7_pax,
+        prov:     r.col8_prov,
+        orden:    r.col24_orden,
+        serv:     r.col5_serv,
+        corredor: r.col25_corredor,
+      }))))
     } catch (err) {
       setMensaje('Error: ' + err.message)
     }
@@ -609,6 +622,13 @@ function Carga() {
               <div style={{ color: '#888', fontSize: '11px' }}>{stat.label}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Resumen Agrupamiento */}
+      {resumenData && (
+        <div style={{ padding: '10px 24px', background: '#f8faff', borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ResumenAgrupamiento resumen={resumenData} />
         </div>
       )}
 
