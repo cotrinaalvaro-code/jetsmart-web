@@ -247,6 +247,7 @@ function Carga() {
       setArchivo(null)
       setMensaje('')
       setFiltros({})
+      setResumenData(null)
       localStorage.removeItem('cargaData')
       localStorage.removeItem('mapaData')
     }
