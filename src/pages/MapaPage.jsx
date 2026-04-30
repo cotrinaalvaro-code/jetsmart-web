@@ -145,16 +145,18 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
   : null
 
   const datosFiltrados = datosActivos.filter(d => {
-    if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
-    if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
-    if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
-    if (filtroVuelo !== 'TODOS') {
-      const tieneVuelo = (d.col9_vuelo || '').trim() === filtroVuelo
-      const estaEnGrupoCombinado = d.col23_grupo && gruposDelVuelo.has(d.col23_grupo)
-      if (!tieneVuelo && !estaEnGrupoCombinado) return false
-    }
-    return true
-  })
+  if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
+  if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
+  if (filtroVuelo !== 'TODOS') {
+    const tieneVuelo = (d.col9_vuelo || '').trim() === filtroVuelo
+    const estaEnGrupoCombinado = d.col23_grupo && gruposDelVuelo && gruposDelVuelo.has(d.col23_grupo)
+    if (!tieneVuelo && !estaEnGrupoCombinado) return false
+    // No aplicar filtro H.ATO a miembros de grupos combinados con vuelo distinto
+    if (filtroHATO !== 'TODOS' && !tieneVuelo && estaEnGrupoCombinado) return true
+  }
+  if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
+  return true
+})
 
   const hatoAnclaGrupo = {}
   datosFiltrados.forEach(d => {
