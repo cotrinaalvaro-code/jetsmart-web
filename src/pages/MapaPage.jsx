@@ -455,34 +455,39 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
                   icon={crearIconoNumero(d.col24_orden, color, hayFiltroActivo ? 24 : 16, grupoCombinado)}
                 >
                   <Popup>
-                    <div style={{ fontSize: '12px', minWidth: '200px' }}>
-                      <strong>{nombre}</strong>
-                      {/* Badge combinado en popup */}
-                      {grupoCombinado && (
-                        <span style={{ marginLeft: 6, fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px' }}>
-                          🔀 Combinado
-                        </span>
-                      )}
-                      <br />
-                      <span style={{ color: d.col4_es === 'E' ? '#2e7d32' : '#1565c0', fontWeight: '600' }}>
-                        {d.col4_es === 'E' ? '▶ Entrada' : '◀ Salida'}
-                      </span>
-                      {' · '}
-                      <span style={{ color: esMiembroCombinado ? '#e65100' : '#333', fontWeight: esMiembroCombinado ? '700' : '400' }}>
-                        {d.col9_vuelo}
-                        {esMiembroCombinado && ' ⚡'}
-                      </span>
-                      <br />
-                      H.ATO: <strong>{d.col10_hato}</strong><br />
-                      Grupo: <strong>{d.col23_grupo}</strong>
-                      {grupoCombinado && (
-                        <span style={{ color: '#e65100', fontSize: '11px' }}> ({vuelosGrupo.join(' + ')})</span>
-                      )}
-                      <br />
-                      Orden: <strong>{d.col24_orden}</strong> · Prov: <strong>{d.col8_prov}</strong><br />
-                      Corredor: <strong>{d.col25_corredor}</strong>
-                    </div>
-                  </Popup>
+  <div style={{ fontSize: '12px', minWidth: '200px' }}>
+    <strong>{nombre}</strong>
+    {grupoCombinado && (
+      <span style={{ marginLeft: 6, fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px' }}>
+        🔀 Combinado
+      </span>
+    )}
+    <br />
+    <span style={{ color: '#2e7d32', fontWeight: '600' }}>
+      ▶ Entrada · {d.col9_vuelo}
+      {esMiembroCombinado && ' ⚡'}
+    </span>
+    <br />
+    {(() => {
+      const vueloS = datos.find(x => x.col1_dni === d.col1_dni && x.col4_es === 'S')
+      return vueloS ? (
+        <span style={{ color: '#1565c0', fontWeight: '600' }}>
+          ◀ Salida &nbsp;· {vueloS.col9_vuelo}
+          <span style={{ color: '#888', fontWeight: '400' }}> H.ATO: {vueloS.col10_hato}</span>
+        </span>
+      ) : null
+    })()}
+    <br />
+    H.ATO entrada: <strong>{d.col10_hato}</strong><br />
+    Grupo: <strong>{d.col23_grupo}</strong>
+    {grupoCombinado && (
+      <span style={{ color: '#e65100', fontSize: '11px' }}> ({vuelosGrupo.join(' + ')})</span>
+    )}
+    <br />
+    Orden: <strong>{d.col24_orden}</strong> · Prov: <strong>{d.col8_prov}</strong><br />
+    Corredor: <strong>{d.col25_corredor}</strong>
+  </div>
+</Popup>
                 </Marker>
               )
             })}
