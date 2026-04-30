@@ -449,6 +449,7 @@ function Carga() {
       const { data: cfgData } = await supabase.from('configuracion').select('*')
       const cfg = {}
       if (cfgData) cfgData.forEach(r => { cfg[r.id] = r.valor })
+        console.log('agrupar_dist_vuelo:', cfg.agrupar_dist_vuelo)
 
       const activos = datos.filter(d => d.activo)
       const resultado = asignarGrupos(activos, cfg)
