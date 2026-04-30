@@ -447,6 +447,7 @@ function Carga() {
     setMensaje('Ejecutando agrupamiento...')
     try {
       const { data: cfgData } = await supabase.from('configuracion').select('*')
+      console.log('cfgData:', cfgData)
       const cfg = {}
 if (cfgData) cfgData.forEach(r => { 
   cfg[r.id] = r.valor
