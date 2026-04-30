@@ -129,7 +129,11 @@ export const asignarGrupos = (filas, cfgSupabase = {}) => {
     maxPaxVan: parseInt(cfgSupabase.max_pax_van) || 4,
     maxPaxPunta: parseInt(cfgSupabase.max_pax_punta) || 2,
     diaValleTotal: (cfgSupabase.dia_valle_total || 'SI').toUpperCase() === 'SI',
-    agruparDistVuelo: String(cfgSupabase.agrupar_dist_vuelo || 'NO').toUpperCase().trim() === 'SI',
+    agruparDistVuelo: (() => {
+  const val = String(cfgSupabase.agrupar_dist_vuelo || 'NO').toUpperCase().trim()
+  console.log('agrupar_dist_vuelo valor:', val)
+  return val === 'SI'
+})(),
     anguloMax: parseFloat(cfgSupabase.angulo_max) || 65,
     pManIniMin: horaAMin(cfgSupabase.punta_manana_ini || '06:00'),
     pManFinMin: horaAMin(cfgSupabase.punta_manana_fin || '09:00'),
