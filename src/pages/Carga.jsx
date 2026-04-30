@@ -447,14 +447,11 @@ function Carga() {
     setMensaje('Ejecutando agrupamiento...')
     try {
       const { data: cfgData } = await supabase.from('configuracion').select('*')
-      console.log('cfgData completo:', JSON.stringify(cfgData))
       const cfg = {}
 if (cfgData) cfgData.forEach(r => { 
   cfg[r.id] = r.valor
-  console.log(r.id, '->', r.valor, typeof r.valor)
 })
-        console.log('agrupar_dist_vuelo:', cfg.agrupar_dist_vuelo)
-
+        
       const activos = datos.filter(d => d.activo)
       const resultado = asignarGrupos(activos, cfg)
 
