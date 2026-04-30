@@ -35,9 +35,18 @@ const getGrupoColor = (grp, gruposList) => {
   return GRUPO_COLORES[idx % GRUPO_COLORES.length] || '#888'
 }
 
-const crearIconoNumero = (numero, color, size = 24) => L.divIcon({
+// Detectar si un grupo tiene vuelos combinados
+const esGrupoCombinado = (miembros) => {
+  const vuelos = new Set(miembros.map(m => (m.col9_vuelo || '').trim()).filter(Boolean))
+  return vuelos.size > 1
+}
+
+const crearIconoNumero = (numero, color, size = 24, combinado = false) => L.divIcon({
   className: '',
-  html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:${size < 24 ? 10 : 12}px;font-family:sans-serif;">${numero}</div>`,
+  html: `<div style="position:relative;width:${size}px;height:${size}px;">
+    <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:${size < 24 ? 10 : 12}px;font-family:sans-serif;">${numero}</div>
+    ${combinado ? `<div style="position:absolute;top:-4px;right:-4px;background:#f9a825;border-radius:50%;width:10px;height:10px;border:1.5px solid white;font-size:7px;display:flex;align-items:center;justify-content:center;">🔀</div>` : ''}
+  </div>`,
   iconSize: [size, size], iconAnchor: [size/2, size/2],
 })
 
@@ -77,7 +86,6 @@ function MapaPage() {
 
   const datosActivos = datos.filter(d => d.activo && d.col21_lat && d.col22_lng)
 
-  // Vuelos ordenados por H.ATO — filtrados por E/S y Prov activos
   const datosParaVuelos = datosActivos.filter(d => {
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
     if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
@@ -92,7 +100,6 @@ function MapaPage() {
   })
   const vuelosUnicos = Object.entries(vuelosConHato).sort((a, b) => a[1] - b[1]).map(([v]) => v).filter(Boolean)
 
-  // Filtros encadenados — cada opción depende de los otros filtros activos
   const datosParaHATO = datosActivos.filter(d => {
     if (filtroVuelo !== 'TODOS' && (d.col9_vuelo || '').trim() !== filtroVuelo) return false
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
@@ -110,16 +117,28 @@ function MapaPage() {
   })
   const provsUnicas = [...new Set(datosParaProv.map(d => d.col8_prov))].filter(Boolean).sort()
 
-  // Datos filtrados final
+  // ── Datos filtrados — incluye grupos combinados completos ──────────────────
+  const gruposDelVuelo = filtroVuelo !== 'TODOS'
+    ? new Set(
+        datosActivos
+          .filter(d => (d.col9_vuelo || '').trim() === filtroVuelo)
+          .map(d => d.col23_grupo)
+          .filter(Boolean)
+      )
+    : null
+
   const datosFiltrados = datosActivos.filter(d => {
-    if (filtroVuelo !== 'TODOS' && (d.col9_vuelo || '').trim() !== filtroVuelo) return false
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
     if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
     if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
+    if (filtroVuelo !== 'TODOS') {
+      const tieneVuelo = (d.col9_vuelo || '').trim() === filtroVuelo
+      const estaEnGrupoCombinado = d.col23_grupo && gruposDelVuelo.has(d.col23_grupo)
+      if (!tieneVuelo && !estaEnGrupoCombinado) return false
+    }
     return true
   })
 
-  // Grupos filtrados ordenados por H.ATO
   const hatoAnclaGrupo = {}
   datosFiltrados.forEach(d => {
     if (!hatoAnclaGrupo[d.col23_grupo] || horaAMin(d.col10_hato) < hatoAnclaGrupo[d.col23_grupo]) {
@@ -129,7 +148,6 @@ function MapaPage() {
   const gruposFiltrados = [...new Set(datosFiltrados.filter(d => d.col23_grupo).map(d => d.col23_grupo))]
     .sort((a, b) => (hatoAnclaGrupo[a] || 0) - (hatoAnclaGrupo[b] || 0))
 
-  // Agrupar por grupo
   const grupoMap = {}
   datosFiltrados.forEach(d => {
     if (!d.col23_grupo) return
@@ -140,7 +158,6 @@ function MapaPage() {
 
   const hayFiltroActivo = filtroVuelo !== 'TODOS' || filtroES !== 'TODOS' || filtroProv !== 'TODOS' || filtroHATO !== 'TODOS'
 
-  // Recalcular grupo completo
   const recalcularGrupo = (nuevosDatos, grp, es) => {
     const miembros = nuevosDatos
       .filter(x => x.col23_grupo === grp && x.col4_es === es)
@@ -293,7 +310,6 @@ function MapaPage() {
           </div>
 
           <div style={{ flex: 1 }} />
-
           <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✕ Cerrar</button>
         </div>
       </div>
@@ -302,9 +318,7 @@ function MapaPage() {
       {moverDesde && (
         <div style={{ padding: '6px 16px', background: '#fff8e1', borderBottom: '1px solid #ffd54f', fontSize: '12px', color: '#f57f17', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span>⚡ Moviendo: <strong>{moverDesde.nombre}</strong> — Selecciona grupo destino en el panel</span>
-          <button onClick={moverANuevoGrupo} style={{ padding: '3px 10px', border: '1px solid #43a047', borderRadius: '4px', background: '#e8f5e9', cursor: 'pointer', fontSize: '11px', color: '#2e7d32', fontWeight: '600' }}>
-            ➕ Nuevo grupo
-          </button>
+          <button onClick={moverANuevoGrupo} style={{ padding: '3px 10px', border: '1px solid #43a047', borderRadius: '4px', background: '#e8f5e9', cursor: 'pointer', fontSize: '11px', color: '#2e7d32', fontWeight: '600' }}>➕ Nuevo grupo</button>
           <button onClick={() => setMoverDesde(null)} style={{ padding: '3px 10px', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancelar</button>
         </div>
       )}
@@ -324,8 +338,13 @@ function MapaPage() {
               const miembros = grupoMap[grp] || []
               const color = getGrupoColor(grp, gruposFiltrados)
               const esMoverDestino = moverDesde && moverDesde.grp !== grp
+              const combinado = esGrupoCombinado(miembros)
+              // Vuelos únicos del grupo para mostrar en header
+              const vuelosGrupo = [...new Set(miembros.map(m => (m.col9_vuelo || '').trim()).filter(Boolean))]
+
               return (
                 <div key={grp} style={{ borderBottom: '2px solid #e0e0e0', background: esMoverDestino ? '#f0f7ff' : 'white' }}>
+                  {/* Header del grupo */}
                   <div style={{
                     padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '8px',
                     background: color + '18', borderBottom: '1px solid ' + color + '33',
@@ -333,19 +352,38 @@ function MapaPage() {
                   }} onClick={() => esMoverDestino && moverATripulante(moverDesde.uid, grp)}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, flexShrink: 0 }} />
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#1a2235' }}>{grp}</span>
+                    {/* Badge vuelos combinados */}
+                    {combinado && (
+                      <span style={{ fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px', fontWeight: '600' }}>
+                        🔀 {vuelosGrupo.join(' + ')}
+                      </span>
+                    )}
+                    {!combinado && (
+                      <span style={{ fontSize: '10px', color: '#888' }}>{vuelosGrupo[0]}</span>
+                    )}
                     <span style={{ fontSize: '11px', color: '#888' }}>{miembros[0]?.col8_prov}</span>
                     <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>{miembros.length} pax</span>
                     {esMoverDestino && <span style={{ fontSize: '11px', color: '#1565c0', fontWeight: '700' }}>← aquí</span>}
                   </div>
 
+                  {/* Miembros */}
                   {miembros.map((d, idx) => {
                     const nombre = d.col14_nombres?.split('-').slice(1).join('-') || d.col14_nombres
                     const esMover = moverDesde?.uid === d.uid
+                    const esCombinado = combinado && vuelosGrupo.length > 1 && (d.col9_vuelo || '').trim() !== vuelosGrupo[0]
                     return (
-                      <div key={d.uid} style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '6px', background: esMover ? '#fff8e1' : 'white', borderBottom: '1px solid #f5f5f5' }}>
+                      <div key={d.uid} style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '6px', background: esMover ? '#fff8e1' : esCombinado ? '#fffde7' : 'white', borderBottom: '1px solid #f5f5f5' }}>
                         <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: color, color: 'white', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', flexShrink: 0 }}>{d.col24_orden}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {nombre}
+                            {/* Badge vuelo diferente */}
+                            {combinado && (
+                              <span style={{ marginLeft: 4, fontSize: '9px', background: esCombinado ? '#fff3e0' : '#e8f5e9', color: esCombinado ? '#e65100' : '#2e7d32', border: `1px solid ${esCombinado ? '#ffcc80' : '#a5d6a7'}`, borderRadius: '3px', padding: '0 3px' }}>
+                                {d.col9_vuelo}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '10px', color: '#888' }}>{d.col13_cat} · {d.col17_dist}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
@@ -386,17 +424,43 @@ function MapaPage() {
               if (!lat || !lng) return null
               const color = getGrupoColor(d.col23_grupo, gruposFiltrados)
               const nombre = d.col14_nombres?.split('-').slice(1).join('-') || d.col14_nombres
+              const miembrosGrupo = grupoMap[d.col23_grupo] || []
+              const grupoCombinado = esGrupoCombinado(miembrosGrupo)
+              const vuelosGrupo = [...new Set(miembrosGrupo.map(m => (m.col9_vuelo || '').trim()).filter(Boolean))]
+              const esMiembroCombinado = grupoCombinado && (d.col9_vuelo || '').trim() !== vuelosGrupo[0]
+
               return (
-                <Marker key={d.uid} position={[lat, lng]} icon={crearIconoNumero(d.col24_orden, color, hayFiltroActivo ? 24 : 16)}>
+                <Marker
+                  key={d.uid}
+                  position={[lat, lng]}
+                  icon={crearIconoNumero(d.col24_orden, color, hayFiltroActivo ? 24 : 16, grupoCombinado)}
+                >
                   <Popup>
-                    <div style={{ fontSize: '12px', minWidth: '180px' }}>
-                      <strong>{nombre}</strong><br />
+                    <div style={{ fontSize: '12px', minWidth: '200px' }}>
+                      <strong>{nombre}</strong>
+                      {/* Badge combinado en popup */}
+                      {grupoCombinado && (
+                        <span style={{ marginLeft: 6, fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px' }}>
+                          🔀 Combinado
+                        </span>
+                      )}
+                      <br />
                       <span style={{ color: d.col4_es === 'E' ? '#2e7d32' : '#1565c0', fontWeight: '600' }}>
                         {d.col4_es === 'E' ? '▶ Entrada' : '◀ Salida'}
-                      </span> · {d.col9_vuelo}<br />
+                      </span>
+                      {' · '}
+                      <span style={{ color: esMiembroCombinado ? '#e65100' : '#333', fontWeight: esMiembroCombinado ? '700' : '400' }}>
+                        {d.col9_vuelo}
+                        {esMiembroCombinado && ' ⚡'}
+                      </span>
+                      <br />
                       H.ATO: <strong>{d.col10_hato}</strong><br />
-                      Grupo: <strong>{d.col23_grupo}</strong> · Orden: <strong>{d.col24_orden}</strong><br />
-                      Prov: <strong>{d.col8_prov}</strong><br />
+                      Grupo: <strong>{d.col23_grupo}</strong>
+                      {grupoCombinado && (
+                        <span style={{ color: '#e65100', fontSize: '11px' }}> ({vuelosGrupo.join(' + ')})</span>
+                      )}
+                      <br />
+                      Orden: <strong>{d.col24_orden}</strong> · Prov: <strong>{d.col8_prov}</strong><br />
                       Corredor: <strong>{d.col25_corredor}</strong>
                     </div>
                   </Popup>
@@ -407,8 +471,6 @@ function MapaPage() {
             {Object.entries(grupoMap).map(([grp, miembros]) => {
               const color = getGrupoColor(grp, gruposFiltrados)
               const esS = miembros[0]?.col4_es === 'S'
-              // Para S: ATO → orden 1 (más cercano) → orden 2 → orden N (más lejano)
-              // Para E: orden 1 (más lejano) → orden 2 → orden N → ATO
               const puntosOrdenados = miembros
                 .filter(d => d.col21_lat && d.col22_lng)
                 .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
@@ -416,9 +478,17 @@ function MapaPage() {
               const pts = esS
                 ? [[ATO_LAT, ATO_LNG], ...puntosOrdenados]
                 : [...puntosOrdenados, [ATO_LAT, ATO_LNG]]
-              return <Polyline key={grp} positions={pts} color={color}
-                weight={hayFiltroActivo ? 2.5 : 1.5} opacity={hayFiltroActivo ? 0.7 : 0.3}
-                dashArray={hayFiltroActivo ? undefined : '4 4'} />
+              const combinado = esGrupoCombinado(miembros)
+              return (
+                <Polyline
+                  key={grp}
+                  positions={pts}
+                  color={color}
+                  weight={hayFiltroActivo ? 2.5 : 1.5}
+                  opacity={hayFiltroActivo ? 0.7 : 0.3}
+                  dashArray={combinado ? '8 4' : (hayFiltroActivo ? undefined : '4 4')}
+                />
+              )
             })}
           </MapContainer>
         </div>
