@@ -98,7 +98,10 @@ const esDePaso = (latAncla, lonAncla, latCand, lonCand, latATO, lonATO, anguloMa
 const tipoCompat = (i, j, trip, cfg) => {
   if (trip[j].es !== trip[i].es) return 0
   const diff = Math.abs(horaAMin(trip[i].hato) - horaAMin(trip[j].hato))
-  const ventana = trip[i].vuelo === trip[j].vuelo ? cfg.ventanaMin : cfg.ventanaDistVuelo
+  const mismoVuelo = trip[i].vuelo === trip[j].vuelo
+  // Si son vuelos distintos y agrupar_dist_vuelo es NO → no compatibles
+  if (!mismoVuelo && !cfg.agruparDistVuelo) return 0
+  const ventana = mismoVuelo ? cfg.ventanaMin : cfg.ventanaDistVuelo
   if (diff > ventana) return 0
   const cI = trip[i].corredor, cJ = trip[j].corredor
   if (cI === cJ) {
