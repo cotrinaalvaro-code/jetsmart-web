@@ -275,17 +275,18 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Vuelo:</span>
             <select style={selectStyle} value={filtroVuelo} onChange={e => {
-              const vuelo = e.target.value
-              setFiltroVuelo(vuelo)
-              setMoverDesde(null)
-              if (vuelo !== 'TODOS') {
-                const hato = datosActivos.find(d => (d.col9_vuelo || '').trim() === vuelo && (filtroES === 'TODOS' || d.col4_es === filtroES))?.col10_hato
-                if (hato) setFiltroHATO(hato)
-                else setFiltroHATO('TODOS')
-              } else {
-                setFiltroHATO('TODOS')
-              }
-            }}>
+  const vuelo = e.target.value
+  setFiltroVuelo(vuelo)
+  setMoverDesde(null)
+  setFiltroHATO('TODOS') // siempre resetear H.ATO al cambiar vuelo
+  if (vuelo !== 'TODOS') {
+    const hato = datosActivos.find(d => 
+      (d.col9_vuelo || '').trim() === vuelo && 
+      (filtroES === 'TODOS' || d.col4_es === filtroES)
+    )?.col10_hato
+    if (hato) setFiltroHATO(hato)
+  }
+}}>
               <option value="TODOS">Todos</option>
               {vuelosUnicos.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
