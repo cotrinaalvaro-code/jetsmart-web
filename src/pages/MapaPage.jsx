@@ -118,14 +118,31 @@ function MapaPage() {
   const provsUnicas = [...new Set(datosParaProv.map(d => d.col8_prov))].filter(Boolean).sort()
 
   // ── Datos filtrados — incluye grupos combinados completos ──────────────────
-  const gruposDelVuelo = filtroVuelo !== 'TODOS'
-    ? new Set(
-        datosActivos
-          .filter(d => (d.col9_vuelo || '').trim() === filtroVuelo)
-          .map(d => d.col23_grupo)
-          .filter(Boolean)
-      )
-    : null
+  // Para cada grupo combinado, identificar cuál es el vuelo principal (H.ATO más temprano)
+const vuéloPrincipalDeGrupo = {}
+datosActivos.forEach(d => {
+  if (!d.col23_grupo || d.col4_es !== 'E') return
+  const grp = d.col23_grupo
+  const min = horaAMin(d.col10_hato)
+  if (vuéloPrincipalDeGrupo[grp] === undefined || min < vuéloPrincipalDeGrupo[grp].min) {
+    vuéloPrincipalDeGrupo[grp] = { min, vuelo: (d.col9_vuelo || '').trim() }
+  }
+})
+
+const gruposDelVuelo = filtroVuelo !== 'TODOS'
+  ? new Set(
+      datosActivos
+        .filter(d => {
+          if ((d.col9_vuelo || '').trim() !== filtroVuelo) return false
+          if (d.col4_es !== 'E') return false
+          // Solo incluir el grupo si este vuelo ES el vuelo principal del grupo
+          const principal = vuéloPrincipalDeGrupo[d.col23_grupo]
+          return principal && principal.vuelo === filtroVuelo
+        })
+        .map(d => d.col23_grupo)
+        .filter(Boolean)
+    )
+  : null
 
   const datosFiltrados = datosActivos.filter(d => {
     if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
