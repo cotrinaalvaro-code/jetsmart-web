@@ -176,9 +176,8 @@ export const calcularETA = async (filas, onProgress) => {
   })
   coordsMap['AEROPUERTO'] = { lat: AERO_LAT, lng: AERO_LON }
 
-  // ── Diccionarios ETA ──────────────────────────────────────────────────────
-  // IMPORTANTE: En ETA_N0A v4, la col "es" almacena el VUELO (ej: JZ7034)
-  // Clave: DNI_DE|DNI_A|DIA|FRANJA|VUELO
+// ── Diccionarios ETA ──────────────────────────────────────────────────────
+  // Clave N0A: DNI_DE|DNI_A|DIA|FRANJA|ES
   const dicN0A = {}
   ;(n0aData || []).forEach(r => {
     const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.dia}|${r.franja}|${(r.es||'').toUpperCase()}`
@@ -186,8 +185,7 @@ export const calcularETA = async (filas, onProgress) => {
     if (med > 0) dicN0A[k] = med
   })
 
-  // En ETA_N0B v4, la col "es" también almacena el VUELO
-  // Clave: DNI_DE|DNI_A|GRUPO_DIA|FRANJA|VUELO
+  // Clave N0B: DNI_DE|DNI_A|GRUPO_DIA|FRANJA|ES
   const dicN0B = {}
   ;(n0bData || []).forEach(r => {
     const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.grupo_dia}|${r.franja}|${(r.es||'').toUpperCase()}`
@@ -209,11 +207,11 @@ export const calcularETA = async (filas, onProgress) => {
     const vueloUp = (vuelo || '').toUpperCase()
 
     // N0A — historial exacto (col 5 = VUELO en v4)
-    const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${vueloUp}`
+    const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${es.toUpperCase()}`
     if (dicN0A[kN0A] !== undefined) return { min: dicN0A[kN0A], nivel: 'N0A' }
 
     // N0B — historial agrupado (col 5 = VUELO en v4)
-    const kN0B = `${deDe}|${deA}|${grupoDia}|${franjaUsar}|${vueloUp}`
+    const kN0B = `${deDe}|${deA}|${grupoDia}|${franjaUsar}|${es.toUpperCase()}`
     if (dicN0B[kN0B] !== undefined) return { min: dicN0B[kN0B], nivel: 'N0B' }
 
     // TomTom caché
