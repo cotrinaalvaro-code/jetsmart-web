@@ -51,12 +51,15 @@ function Navbar() {
         </button>
         <button style={navStyle('/tripulantes')} onClick={() => navigate('/tripulantes')}>
           Tripulantes
-        </button>
+        </button> 
         <button style={navStyle('/configuracion')} onClick={() => navigate('/configuracion')}>
           ⚙️ Config
         </button>
         <button style={navStyle('/corredores')} onClick={() => navigate('/corredores')}>
           🗺️ Corredores
+        </button>
+        <button style={navStyle('/traslados')} onClick={() => navigate('/traslados')}>
+          🚐 Traslados
         </button>
       </div>
 
