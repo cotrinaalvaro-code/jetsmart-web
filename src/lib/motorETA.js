@@ -36,11 +36,10 @@ export const getFranja = (hora) => {
 
 // ── Grupo día ─────────────────────────────────────────────────────────────────
 export const getGrupoDia = (fechaStr) => {
-  // fechaStr formato DD/MM/YYYY
   try {
     const [d, m, y] = fechaStr.split('/').map(Number)
     const fecha = new Date(y, m - 1, d)
-    const wd = fecha.getDay() // 0=Dom, 1=Lun...6=Sab
+    const wd = fecha.getDay()
     if (wd === 1) return 'LUN'
     if (wd >= 2 && wd <= 4) return 'MAR-JUE'
     if (wd === 5) return 'VIE'
@@ -82,7 +81,6 @@ const calcMediana = (str) => {
   const vals = str.split(';').map(v => parseFloat(v)).filter(v => !isNaN(v)).sort((a,b)=>a-b)
   if (vals.length === 0) return 0
   if (vals.length === 1) return vals[0]
-  // IQR para quitar outliers
   const q1 = vals[Math.floor(vals.length * 0.25)]
   const q3 = vals[Math.floor(vals.length * 0.75)]
   const iqr = q3 - q1
@@ -93,37 +91,21 @@ const calcMediana = (str) => {
     : filtrados[mid]
 }
 
-// ── Velocidad calibrada (tabla estática — fallback) ───────────────────────────
+// ── Velocidad estática fallback ───────────────────────────────────────────────
 const getVelEstatica = (franja, tipoTramo, distKm) => {
-  if (distKm < 5) {
-    const t = { 'DNI_ATO': {'Valle':7.4,'Punta AM':6.2,'Intermedio bajo':6.2,'Intermedio alto':6.1,'Punta PM':5.9},
-                'ATO_DNI': {'Valle':7.4,'Punta AM':6.2,'Intermedio bajo':6.2,'Intermedio alto':6.1,'Punta PM':5.9},
-                'DNI_DNI': {'Valle':7.4,'Punta AM':6.2,'Intermedio bajo':6.2,'Intermedio alto':6.1,'Punta PM':5.9} }
-    return (t[tipoTramo] || t['DNI_ATO'])[franja] || 6.4
-  } else if (distKm < 10) {
-    const t = { 'DNI_ATO': {'Valle':11.1,'Punta AM':9.3,'Intermedio bajo':10,'Intermedio alto':10,'Punta PM':9.3},
-                'ATO_DNI': {'Valle':11.1,'Punta AM':9.3,'Intermedio bajo':10,'Intermedio alto':10,'Punta PM':9.3},
-                'DNI_DNI': {'Valle':11.1,'Punta AM':9.3,'Intermedio bajo':10,'Intermedio alto':10,'Punta PM':9.3} }
-    return (t[tipoTramo] || t['DNI_ATO'])[franja] || 9.9
-  } else if (distKm < 15) {
-    const t = { 'DNI_ATO': {'Valle':15.2,'Punta AM':12.5,'Intermedio bajo':14.2,'Intermedio alto':12.7,'Punta PM':12.6},
-                'ATO_DNI': {'Valle':15.2,'Punta AM':12.5,'Intermedio bajo':14.2,'Intermedio alto':12.7,'Punta PM':12.6},
-                'DNI_DNI': {'Valle':15.2,'Punta AM':12.5,'Intermedio bajo':14.2,'Intermedio alto':12.7,'Punta PM':12.6} }
-    return (t[tipoTramo] || t['DNI_ATO'])[franja] || 13.4
-  } else if (distKm < 20) {
-    const t = { 'DNI_ATO': {'Valle':19.1,'Punta AM':15.8,'Intermedio bajo':17.9,'Intermedio alto':16.7,'Punta PM':16.4},
-                'ATO_DNI': {'Valle':19.1,'Punta AM':15.8,'Intermedio bajo':17.9,'Intermedio alto':16.7,'Punta PM':16.4},
-                'DNI_DNI': {'Valle':19.1,'Punta AM':15.8,'Intermedio bajo':17.9,'Intermedio alto':16.7,'Punta PM':16.4} }
-    return (t[tipoTramo] || t['DNI_ATO'])[franja] || 17.2
-  } else {
-    const t = { 'DNI_ATO': {'Valle':22.8,'Punta AM':19.2,'Intermedio bajo':21.3,'Intermedio alto':20.1,'Punta PM':19.8},
-                'ATO_DNI': {'Valle':22.8,'Punta AM':19.2,'Intermedio bajo':21.3,'Intermedio alto':20.1,'Punta PM':19.8},
-                'DNI_DNI': {'Valle':22.8,'Punta AM':19.2,'Intermedio bajo':21.3,'Intermedio alto':20.1,'Punta PM':19.8} }
-    return (t[tipoTramo] || t['DNI_ATO'])[franja] || 20.6
+  const tablas = {
+    r1: { Valle:7.4,  'Punta AM':6.2,  'Intermedio bajo':6.2,  'Intermedio alto':6.1,  'Punta PM':5.9  },
+    r2: { Valle:11.1, 'Punta AM':9.3,  'Intermedio bajo':10,   'Intermedio alto':10,   'Punta PM':9.3  },
+    r3: { Valle:15.2, 'Punta AM':12.5, 'Intermedio bajo':14.2, 'Intermedio alto':12.7, 'Punta PM':12.6 },
+    r4: { Valle:19.1, 'Punta AM':15.8, 'Intermedio bajo':17.9, 'Intermedio alto':16.7, 'Punta PM':16.4 },
+    r5: { Valle:22.8, 'Punta AM':19.2, 'Intermedio bajo':21.3, 'Intermedio alto':20.1, 'Punta PM':19.8 },
   }
+  const rango = distKm < 5 ? 'r1' : distKm < 10 ? 'r2' : distKm < 15 ? 'r3' : distKm < 20 ? 'r4' : 'r5'
+  const defaults = { r1:6.4, r2:9.9, r3:13.4, r4:17.2, r5:20.6 }
+  return tablas[rango][franja] || defaults[rango]
 }
 
-// ── N25 Tramo (fallback GPS + velocidad) ──────────────────────────────────────
+// ── N25 Tramo fallback ────────────────────────────────────────────────────────
 const n25Tramo = (lat1, lon1, lat2, lon2, franja, tipoTramo) => {
   const dist = haversine(lat1, lon1, lat2, lon2)
   if (dist < 0.3) return 5
@@ -135,11 +117,11 @@ const n25Tramo = (lat1, lon1, lat2, lon2, franja, tipoTramo) => {
 }
 
 // ── TomTom API ────────────────────────────────────────────────────────────────
-const franjaHora = { 
+const franjaHora = {
   'Valle': '03:00:00', 'Punta AM': '07:30:00',
   'Intermedio bajo': '10:00:00', 'Intermedio alto': '13:00:00', 'Punta PM': '18:00:00'
 }
-const grupoDiaSemana = { 'LUN':1,'MAR-JUE':2,'VIE':4,'SAB':5,'DOM':0 }
+const grupoDiaSemana = { 'LUN':1, 'MAR-JUE':2, 'VIE':4, 'SAB':5, 'DOM':0 }
 
 const consultarTomTom = async (lat1, lon1, lat2, lon2, franja, grupoDia) => {
   try {
@@ -151,10 +133,8 @@ const consultarTomTom = async (lat1, lon1, lat2, lon2, franja, grupoDia) => {
     const fecha = new Date(hoy)
     fecha.setDate(hoy.getDate() + diff)
     const departAt = `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getDate()).padStart(2,'0')}T${hora}`
-    
     const coords = `${lat1.toFixed(7)},${lon1.toFixed(7)}:${lat2.toFixed(7)},${lon2.toFixed(7)}`
     const url = `https://api.tomtom.com/routing/1/calculateRoute/${coords}/json?key=${TOMTOM_KEY}&departAt=${departAt}&traffic=true&travelMode=car`
-    
     const resp = await fetch(url)
     if (!resp.ok) return 0
     const data = await resp.json()
@@ -174,18 +154,16 @@ const guardarTomTom = async (dniDe, dniA, franja, minutos) => {
 
 // ── Motor principal ───────────────────────────────────────────────────────────
 export const calcularETA = async (filas, onProgress) => {
-  if (!filas || filas.length === 0) return filas
+  if (!filas || filas.length === 0) return { filas, resumen: {} }
 
   onProgress?.('Cargando tablas ETA desde Supabase...')
 
-  // Cargar tablas ETA desde Supabase
   const [{ data: n0aData }, { data: n0bData }, { data: ttData }] = await Promise.all([
     supabase.from('eta_n0a').select('dni_de,dni_a,dia,franja,es,minutos,n_reg'),
     supabase.from('eta_n0b').select('dni_de,dni_a,grupo_dia,franja,es,minutos'),
     supabase.from('eta_tomtom').select('dni_de,dni_a,franja,minutos'),
   ])
 
-  // Cargar coordenadas de tripulantes desde Supabase
   const dnisList = [...new Set(filas.map(f => f.col1_dni).filter(Boolean))]
   const { data: tripData } = await supabase
     .from('tripulantes')
@@ -198,21 +176,23 @@ export const calcularETA = async (filas, onProgress) => {
   })
   coordsMap['AEROPUERTO'] = { lat: AERO_LAT, lng: AERO_LON }
 
-  // Construir diccionarios en memoria (igual que CargarN0A, CargarN0B, CargarTomTom en VBA)
+  // ── Diccionarios ETA ──────────────────────────────────────────────────────
+  // IMPORTANTE: En ETA_N0A v4, la col "es" almacena el VUELO (ej: JZ7034)
+  // Clave: DNI_DE|DNI_A|DIA|FRANJA|VUELO
   const dicN0A = {}
   ;(n0aData || []).forEach(r => {
-    const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.dia}|${r.franja}|${r.es}`
+    const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.dia}|${r.franja}|${(r.es||'').toUpperCase()}`
     const med = calcMediana(r.minutos)
-    const nReg = r.n_reg || 1
-    // Si único registro < 10 min → no confiable, skip
-    if (nReg === 1 && med < 10) return
-    dicN0A[k] = med
+    if (med > 0) dicN0A[k] = med
   })
 
+  // En ETA_N0B v4, la col "es" también almacena el VUELO
+  // Clave: DNI_DE|DNI_A|GRUPO_DIA|FRANJA|VUELO
   const dicN0B = {}
   ;(n0bData || []).forEach(r => {
-    const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.grupo_dia}|${r.franja}|${r.es}`
-    dicN0B[k] = calcMediana(r.minutos)
+    const k = `${(r.dni_de||'').toUpperCase()}|${(r.dni_a||'').toUpperCase()}|${r.grupo_dia}|${r.franja}|${(r.es||'').toUpperCase()}`
+    const med = calcMediana(r.minutos)
+    if (med > 0) dicN0B[k] = med
   })
 
   const dicTomTom = {}
@@ -221,25 +201,26 @@ export const calcularETA = async (filas, onProgress) => {
     dicTomTom[k] = r.minutos
   })
 
-  // ── Función buscarTramo (replica BuscarTramo VBA) ─────────────────────────
-  const buscarTramo = async (dniDe, dniA, franja, diaNombre, grupoDia, es, hSalida) => {
+  // ── buscarTramo ───────────────────────────────────────────────────────────
+  const buscarTramo = async (dniDe, dniA, franja, diaNombre, grupoDia, es, hSalida, vuelo) => {
     const franjaUsar = hSalida ? getFranja(hSalida) : franja
     const deDe = (dniDe || '').toUpperCase().trim()
     const deA  = (dniA  || '').toUpperCase().trim()
+    const vueloUp = (vuelo || '').toUpperCase()
 
-    // N0A — historial exacto
-    const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${es}`
+    // N0A — historial exacto (col 5 = VUELO en v4)
+    const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${vueloUp}`
     if (dicN0A[kN0A] !== undefined) return { min: dicN0A[kN0A], nivel: 'N0A' }
 
-    // N0B — historial agrupado
-    const kN0B = `${deDe}|${deA}|${grupoDia}|${franjaUsar}|${es}`
+    // N0B — historial agrupado (col 5 = VUELO en v4)
+    const kN0B = `${deDe}|${deA}|${grupoDia}|${franjaUsar}|${vueloUp}`
     if (dicN0B[kN0B] !== undefined) return { min: dicN0B[kN0B], nivel: 'N0B' }
 
     // TomTom caché
     const kTT = `${deDe}|${deA}|${franjaUsar}`
     if (dicTomTom[kTT] !== undefined) return { min: dicTomTom[kTT], nivel: 'TomTom' }
 
-    // TomTom API (solo si tenemos coordenadas)
+    // TomTom API
     const c1 = coordsMap[esAeropuerto(dniDe) ? 'AEROPUERTO' : dniDe]
     const c2 = coordsMap[esAeropuerto(dniA)  ? 'AEROPUERTO' : dniA]
 
@@ -252,7 +233,7 @@ export const calcularETA = async (filas, onProgress) => {
       }
     }
 
-    // N25 — fallback GPS
+    // N25 fallback GPS
     if (c1 && c2) {
       const tipoTramo = esAeropuerto(dniDe) ? 'ATO_DNI' : esAeropuerto(dniA) ? 'DNI_ATO' : 'DNI_DNI'
       const tN25 = n25Tramo(c1.lat, c1.lng, c2.lat, c2.lng, franjaUsar, tipoTramo)
@@ -262,7 +243,7 @@ export const calcularETA = async (filas, onProgress) => {
     return { min: 15, nivel: 'N25' }
   }
 
-  // ── Agrupar filas por SERV ────────────────────────────────────────────────
+  // ── Agrupar por SERV ──────────────────────────────────────────────────────
   const servicios = {}
   filas.forEach(f => {
     const serv = f.col5_serv
@@ -284,14 +265,15 @@ export const calcularETA = async (filas, onProgress) => {
     const primera = miembros[0]
     if (!primera) continue
 
-    const es       = primera.col4_es
-    const fecha    = primera.col3_fecha
-    const hato     = primera.col10_hato
-    const diaNombre= getDiaNombre(fecha)
-    const grupoDia = getGrupoDia(fecha)
+    const es        = primera.col4_es
+    const vuelo     = (primera.col9_vuelo || '').toUpperCase()
+    const fecha     = primera.col3_fecha
+    const hato      = primera.col10_hato
+    const diaNombre = getDiaNombre(fecha)
+    const grupoDia  = getGrupoDia(fecha)
     const franjaBase = getFranja(hato)
 
-    // Obtener DNIs en orden de parada
+    // DNIs en orden de parada
     const dnis = miembros.map(m => {
       const nombre = m.col14_nombres || ''
       const guion = nombre.indexOf('-')
@@ -308,87 +290,71 @@ export const calcularETA = async (filas, onProgress) => {
     let nivelServ = 'N25'
 
     if (es === 'E') {
-      // E: DNI[0]→DNI[1]→...→AEROPUERTO
       for (let i = 0; i < dnis.length - 1; i++) {
         hSalActual = sumarMin(primera.col6_hreal || '00:00', tAcum)
-        const { min, nivel } = await buscarTramo(dnis[i], dnis[i+1], franjaBase, diaNombre, grupoDia, es, hSalActual)
+        const { min, nivel } = await buscarTramo(dnis[i], dnis[i+1], franjaBase, diaNombre, grupoDia, es, hSalActual, vuelo)
         etaTotal += min; tAcum += min; nivelServ = nivel
       }
-      // Último DNI → AEROPUERTO
       hSalActual = sumarMin(primera.col6_hreal || '00:00', tAcum)
-      const { min: minFinal, nivel: nFinal } = await buscarTramo(dnis[dnis.length-1], 'AEROPUERTO', franjaBase, diaNombre, grupoDia, es, hSalActual)
+      const { min: minFinal, nivel: nFinal } = await buscarTramo(dnis[dnis.length-1], 'AEROPUERTO', franjaBase, diaNombre, grupoDia, es, hSalActual, vuelo)
       etaTotal += minFinal; nivelServ = nFinal
 
-      // H.REAL = H.ATO - ETA total
       const hReal = restarMin(hato, etaTotal)
-
-      // H.REC. para cada miembro (hora de recojo en orden)
       let hRecAcum = hReal
+      const deltaPromedio = dnis.length > 1 ? etaTotal / dnis.length : etaTotal
+
       miembros.forEach((m, idx) => {
         const i = uidMap[m.uid]
         if (i === undefined) return
         resultado[i].col6_hreal = hReal
         resultado[i].col11_hrec = hRecAcum
-        resultado[i]._etaNivel = nivelServ
-
-        if (idx < dnis.length - 1) {
-          // Calcular delta al siguiente (ya calculado arriba, aproximar)
-          const delta = etaTotal / dnis.length
-          hRecAcum = sumarMin(hRecAcum, delta)
-        }
+        resultado[i]._etaNivel  = nivelServ
+        if (idx < dnis.length - 1) hRecAcum = sumarMin(hRecAcum, deltaPromedio)
       })
 
     } else {
-      // S: AEROPUERTO→DNI[0]→DNI[1]→...
       const hRealBase = hato
-      let hRecPrim = ''
-      let hRecAnterior = hRealBase
-      tAcum = 0
+      let tAcumS = 0
 
-      // Primer tramo: ATO → DNI[0]
-      hSalActual = hRealBase
-      const { min: minATO, nivel: nATO } = await buscarTramo('AEROPUERTO', dnis[0], franjaBase, diaNombre, grupoDia, es, hSalActual)
-      hRecPrim = sumarMin(hRealBase, minATO)
-      tAcum = minATO; nivelServ = nATO
+      const { min: minATO, nivel: nATO } = await buscarTramo('AEROPUERTO', dnis[0], franjaBase, diaNombre, grupoDia, es, hRealBase, vuelo)
+      tAcumS = minATO; nivelServ = nATO
+      let hRecActual = sumarMin(hRealBase, minATO)
 
-      miembros.forEach((m, idx) => {
+      miembros.forEach((m) => {
         const i = uidMap[m.uid]
-        if (i === undefined) return
-        resultado[i].col6_hreal = hRealBase
-        resultado[i]._etaNivel = nivelServ
+        if (i !== undefined) resultado[i].col6_hreal = hRealBase
       })
 
-      // Tramos intermedios: DNI[i] → DNI[i+1]
-      let hRecActual = hRecPrim
       for (let idx = 0; idx < miembros.length; idx++) {
         const i = uidMap[miembros[idx].uid]
-        if (i === undefined) continue
-        resultado[i].col11_hrec = hRecActual
-
+        if (i !== undefined) {
+          resultado[i].col11_hrec = hRecActual
+          resultado[i]._etaNivel  = nivelServ
+        }
         if (idx < dnis.length - 1) {
-          hSalActual = sumarMin(hRealBase, tAcum)
-          const { min: minSig } = await buscarTramo(dnis[idx], dnis[idx+1], franjaBase, diaNombre, grupoDia, es, hSalActual)
+          hSalActual = sumarMin(hRealBase, tAcumS)
+          const { min: minSig } = await buscarTramo(dnis[idx], dnis[idx+1], franjaBase, diaNombre, grupoDia, es, hSalActual, vuelo)
           hRecActual = sumarMin(hRecActual, minSig)
-          tAcum += minSig
+          tAcumS += minSig
         }
       }
     }
 
     cntTotal++
-    if (nivelServ === 'N0A') cntN0A++
-    else if (nivelServ === 'N0B') cntN0B++
+    if      (nivelServ === 'N0A')    cntN0A++
+    else if (nivelServ === 'N0B')    cntN0B++
     else if (nivelServ === 'TomTom') cntTomTom++
-    else cntN25++
+    else                             cntN25++
   }
 
   return {
     filas: resultado,
     resumen: {
       total: cntTotal,
-      histExacto: cntN0A,
+      histExacto:   cntN0A,
       histAgrupado: cntN0B,
-      tomtom: cntTomTom,
-      soloGPS: cntN25,
+      tomtom:       cntTomTom,
+      soloGPS:      cntN25,
     }
   }
 }
