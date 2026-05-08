@@ -4,6 +4,7 @@ import * as XLSXStyle from 'xlsx-js-style'
 import { supabase } from '../lib/supabase'
 import { asignarGrupos } from '../lib/agrupamiento'
 import ResumenAgrupamiento, { calcularResumen } from '../components/ResumenAgrupamiento'
+import { calcularETA } from '../lib/motorETA'
 
 const ZONA_CORREDOR = {
   'SMP INGENIERIA': 'NORESTE 2', 'SMP PACIFICO': 'NORTE 5', 'SMP SAN DIEGO': 'NORTE 3',
@@ -199,6 +200,8 @@ function Carga() {
   const [archivo, setArchivo] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [agrupando, setAgrupando] = useState(false)
+  const [calculandoETA, setCalculandoETA] = useState(false)
+  const [etaResumen, setEtaResumen] = useState(null)
   const [resumenData, setResumenData] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [showCols, setShowCols] = useState(false)
@@ -448,10 +451,8 @@ function Carga() {
     try {
       const { data: cfgData } = await supabase.from('configuracion').select('*')
       const cfg = {}
-if (cfgData) cfgData.forEach(r => { 
-  cfg[r.id] = r.valor
-})
-        
+      if (cfgData) cfgData.forEach(r => { cfg[r.id] = r.valor })
+
       const activos = datos.filter(d => d.activo)
       const resultado = asignarGrupos(activos, cfg)
 
@@ -501,6 +502,30 @@ if (cfgData) cfgData.forEach(r => {
       setMensaje('Error: ' + err.message)
     }
     setAgrupando(false)
+  }
+
+
+  const handleCalcularETA = async () => {
+    if (!datos.some(d => d.col5_serv)) {
+      setMensaje('⚠️ Ejecuta primero el Agrupamiento antes de calcular ETA.')
+      return
+    }
+    setCalculandoETA(true)
+    setMensaje('Calculando ETA...')
+    try {
+      const activos = datos.filter(d => d.activo)
+      const { filas: resultado, resumen } = await calcularETA(activos, (msg) => setMensaje(msg))
+      const datosActualizados = datos.map(d => {
+        const r = resultado.find(f => f.uid === d.uid)
+        return r ? { ...d, col6_hreal: r.col6_hreal, col11_hrec: r.col11_hrec, _etaNivel: r._etaNivel } : d
+      })
+      setDatos(datosActualizados)
+      setEtaResumen(resumen)
+      setMensaje(`✅ ETA calculado — ${resumen.total} servicios | Hist.exacto: ${resumen.histExacto} | Hist.agrup: ${resumen.histAgrupado} | TomTom: ${resumen.tomtom} | GPS: ${resumen.soloGPS}`)
+    } catch (err) {
+      setMensaje('Error ETA: ' + err.message)
+    }
+    setCalculandoETA(false)
   }
 
   const exportarExcel = () => {
@@ -572,6 +597,12 @@ if (cfgData) cfgData.forEach(r => {
                   style={{ padding: '7px 16px', background: agrupando ? '#aaa' : '#00cc88', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: agrupando ? 'not-allowed' : 'pointer' }}>
                   {agrupando ? 'Agrupando...' : '⚡ Ejecutar Agrupamiento'}
                 </button>
+                {tieneGrupos && (
+                  <button onClick={handleCalcularETA} disabled={calculandoETA}
+                    style={{ padding: '7px 16px', background: calculandoETA ? '#aaa' : '#e65100', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: calculandoETA ? 'not-allowed' : 'pointer' }}>
+                    {calculandoETA ? 'Calculando...' : '🕐 Calcular ETA'}
+                  </button>
+                )}
                 {tieneGrupos && (
                   <button onClick={() => { localStorage.setItem('mapaData', JSON.stringify(datos)); window.open('/mapa', '_blank') }}
                     style={{ padding: '7px 16px', background: 'white', border: '1px solid #1565c0', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#1565c0' }}>
