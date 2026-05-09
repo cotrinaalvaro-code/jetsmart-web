@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
 
 function Tripulantes() {
   const [tripulantes, setTripulantes] = useState([])
