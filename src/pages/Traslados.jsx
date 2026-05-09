@@ -44,7 +44,9 @@ function Traslados() {
       const hUltima = es === 'E' ? hato : (miembros[miembros.length - 1]?.col11_hrec || hato)
       const nivel   = primera._etaNivel || 'N25'
       const prov    = primera.col8_prov
-      const etaMin  = Math.abs(horaAMin(hato) - horaAMin(hInicio))
+      const etaMin = es === 'E'
+  ? Math.abs(horaAMin(hato) - horaAMin(hInicio))
+  : Math.abs(horaAMin(hUltima) - horaAMin(hato))
       const recorrido = miembros.map(m => m.col17_dist).filter(Boolean).join(' - ')
       const tripulantes = miembros.map(m => {
         const nombre = m.col14_nombres || ''
