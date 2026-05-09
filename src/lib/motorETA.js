@@ -199,22 +199,19 @@ export const calcularETA = async (filas, onProgress) => {
     dicTomTom[k] = r.minutos
   })
 
-  // ── buscarTramo ───────────────────────────────────────────────────────────
+ // ── buscarTramo ───────────────────────────────────────────────────────────
   const buscarTramo = async (dniDe, dniA, franja, diaNombre, grupoDia, es, hSalida, vuelo) => {
     const franjaUsar = hSalida ? getFranja(hSalida) : franja
     const deDe = (dniDe || '').toUpperCase().trim()
     const deA  = (dniA  || '').toUpperCase().trim()
     const vueloUp = (vuelo || '').toUpperCase()
 
-    // N0A — historial exacto (col 5 = VUELO en v4)
+    // N0A — historial exacto
     const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${es.toUpperCase()}`
     console.log('N0A key:', kN0A, '| found:', dicN0A[kN0A] !== undefined)
     if (dicN0A[kN0A] !== undefined) return { min: dicN0A[kN0A], nivel: 'N0A' }
-    // N0A — historial exacto (col 5 = VUELO en v4)
-    const kN0A = `${deDe}|${deA}|${diaNombre}|${franjaUsar}|${es.toUpperCase()}`
-    if (dicN0A[kN0A] !== undefined) return { min: dicN0A[kN0A], nivel: 'N0A' }
 
-    // N0B — historial agrupado (col 5 = VUELO en v4)
+    // N0B — historial agrupado
     const kN0B = `${deDe}|${deA}|${grupoDia}|${franjaUsar}|${es.toUpperCase()}`
     if (dicN0B[kN0B] !== undefined) return { min: dicN0B[kN0B], nivel: 'N0B' }
 
