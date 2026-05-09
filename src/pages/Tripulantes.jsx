@@ -1,3 +1,6 @@
+import { useEffect, useState, useRef } from 'react'
+import * as XLSX from 'xlsx'
+import { supabase } from '../lib/supabase'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -77,7 +80,55 @@ function Tripulantes() {
     'TEA', 'TEA Senior', 'TEA TRAINEE', 'TEA Instructor', 'TEA Coordinador',
     'TEA Ultra', 'Jefe de Instrucción', 'Jefe de Pilotos', 'Safety Pilot',
     'Gerente de Operación Piloto', 'Gerente General']
+const fileInputRef = useRef(null)
+  const [cargando, setCargando] = useState(false)
+  const [mensajeCarga, setMensajeCarga] = useState('')
 
+  const descargarPlantilla = () => {
+    const headers = ['dni','nombre','apellido','cargo','correo','telefono','direccion','distrito','zona_distrito','lat','lng','referencia','fecha_ingreso']
+    const ws = XLSX.utils.aoa_to_sheet([headers])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Tripulantes')
+    XLSX.writeFile(wb, 'Plantilla_Tripulantes.xlsx')
+  }
+
+  const handleCargarExcel = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setCargando(true)
+    setMensajeCarga('Leyendo Excel...')
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        if (rows.length === 0) { setMensajeCarga('❌ El archivo está vacío'); setCargando(false); return }
+        setMensajeCarga(`Cargando ${rows.length} tripulantes...`)
+        const filas = rows.map(r => ({
+          dni:           String(r.dni || '').trim(),
+          nombre:        String(r.nombre || '').trim(),
+          apellido:      String(r.apellido || '').trim(),
+          cargo:         String(r.cargo || '').trim(),
+          correo:        String(r.correo || '').trim(),
+          telefono:      String(r.telefono || '').trim(),
+          direccion:     String(r.direccion || '').trim(),
+          distrito:      String(r.distrito || '').trim(),
+          zona_distrito: String(r.zona_distrito || '').trim(),
+          lat:           r.lat ? parseFloat(r.lat) : null,
+          lng:           r.lng ? parseFloat(r.lng) : null,
+          referencia:    String(r.referencia || '').trim(),
+          fecha_ingreso: String(r.fecha_ingreso || '').trim() || null,
+        })).filter(r => r.dni && r.nombre)
+        const { error } = await supabase.from('tripulantes').upsert(filas, { onConflict: 'dni' })
+        if (error) { setMensajeCarga('❌ Error: ' + error.message) }
+        else { setMensajeCarga(`✅ ${filas.length} tripulantes cargados correctamente`); fetchTripulantes() }
+      } catch (err) { setMensajeCarga('❌ Error: ' + err.message) }
+      setCargando(false)
+    }
+    reader.readAsBinaryString(file)
+  }
   return (
     <div style={{ background: 'white', minHeight: '100vh' }}>
 
@@ -97,20 +148,27 @@ function Tripulantes() {
               fontSize: '13px', width: '260px', outline: 'none'
             }}
           />
+          <button onClick={descargarPlantilla}
+            style={{ padding: '8px 18px', background: 'white', color: '#2e7d32', border: '1px solid #2e7d32', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+            📥 Plantilla Excel
+          </button>
+          <label style={{ padding: '8px 18px', background: '#f57f17', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+            📤 Cargar Excel
+            <input type="file" accept=".xlsx,.xls" onChange={handleCargarExcel} style={{ display: 'none' }} ref={fileInputRef} />
+          </label>
           <button
             onClick={() => { setShowForm(!showForm); setEditando(null); setForm({ dni: '', nombre: '', apellido: '', cargo: '', correo: '', telefono: '', direccion: '', distrito: '', zona_distrito: '', lat: '', lng: '', referencia: '', fecha_ingreso: '' }) }}
-            style={{
-              padding: '8px 18px', background: '#00b4d8', color: 'white',
-              border: 'none', borderRadius: '6px', cursor: 'pointer',
-              fontWeight: '600', fontSize: '13px'
-            }}
-          >
+            style={{ padding: '8px 18px', background: '#00b4d8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
             {showForm && !editando ? 'Cancelar' : '+ Nuevo Tripulante'}
           </button>
         </div>
       </div>
 
-      {/* Formulario */}
+      {mensajeCarga && (
+        <div style={{ padding: '8px 24px', background: mensajeCarga.includes('❌') ? '#fff5f5' : '#f1f8e9', borderBottom: '1px solid #e0e0e0', color: mensajeCarga.includes('❌') ? '#c62828' : '#2e7d32', fontSize: '13px', fontWeight: '600' }}>
+          {mensajeCarga}
+        </div>
+      )}{/* Formulario */}
       {showForm && (
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #e0e0e0', background: '#fafafa' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
