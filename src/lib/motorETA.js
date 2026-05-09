@@ -152,6 +152,7 @@ export const calcularETA = async (filas, onProgress) => {
       const {data, error} = await supabase.from(tabla).select(select).range(desde, desde+pageSize-1)
       if (error||!data||data.length===0) break
       todos = todos.concat(data)
+      console.log(`${tabla}: ${todos.length} filas cargadas`)
       if (data.length < pageSize) break
       desde += pageSize
     }
