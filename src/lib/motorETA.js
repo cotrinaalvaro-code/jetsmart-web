@@ -157,7 +157,6 @@ export const calcularETA = async (filas, onProgress) => {
         .order('id', {ascending: true})
       if (error || !data || data.length === 0) break
       todos = todos.concat(data)
-      console.log(`${tabla}: ${todos.length} filas cargadas`)
       if (data.length < lote) break
       desde += lote
     }
