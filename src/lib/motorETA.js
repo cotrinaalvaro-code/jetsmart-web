@@ -159,8 +159,8 @@ export const calcularETA = async (filas, onProgress) => {
   onProgress?.('Cargando tablas ETA desde Supabase...')
 
   const [{ data: n0aData }, { data: n0bData }, { data: ttData }] = await Promise.all([
-    supabase.from('eta_n0a').select('dni_de,dni_a,dia,franja,es,minutos,n_reg'),
-    supabase.from('eta_n0b').select('dni_de,dni_a,grupo_dia,franja,es,minutos'),
+    supabase.from('eta_n0a').select('dni_de,dni_a,dia,franja,es,minutos,n_reg').limit(100000),
+    supabase.from('eta_n0b').select('dni_de,dni_a,grupo_dia,franja,es,minutos').limit(100000),
     supabase.from('eta_tomtom').select('dni_de,dni_a,franja,minutos'),
   ])
 
