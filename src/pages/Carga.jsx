@@ -520,6 +520,7 @@ function Carga() {
         return r ? { ...d, col6_hreal: r.col6_hreal, col11_hrec: r.col11_hrec, _etaNivel: r._etaNivel } : d
       })
       setDatos(datosActualizados)
+      localStorage.setItem('cargaData', JSON.stringify(datosActualizados))
       setEtaResumen(resumen)
       setMensaje(`✅ ETA calculado — ${resumen.total} servicios | Hist.exacto: ${resumen.histExacto} | Hist.agrup: ${resumen.histAgrupado} | TomTom: ${resumen.tomtom} | GPS: ${resumen.soloGPS}`)
     } catch (err) {
