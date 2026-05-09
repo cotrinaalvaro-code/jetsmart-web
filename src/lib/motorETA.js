@@ -196,7 +196,7 @@ export const calcularETA = async (filas, onProgress) => {
 
   // ── BuscarTramo — replica exacta de la función VBA ────────────────────────
   const buscarTramo = async (dniDe, dniA, franja, diaNombre, grupoDia, es, hSalida) => {
-    const franjaUsar = hSalida ? getFranja(hSalida) : franja
+    const franjaUsar = (hSalida && hSalida !== '00:00') ? getFranja(hSalida) : franja
     const deDe = (dniDe||'').toUpperCase().trim()
     const deA  = (dniA ||'').toUpperCase().trim()
     const esUp = (es||'').toUpperCase().trim()
