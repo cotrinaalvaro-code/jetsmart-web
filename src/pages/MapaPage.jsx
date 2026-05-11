@@ -354,13 +354,6 @@ function MapaPage() {
               {provsUnicas.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            {/* Franja horaria */}
-            {franjaActual && (
-              <div style={{ background: franjaActual.bg, color: franjaActual.color, border: `1px solid ${franjaActual.color}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
-                {filtroHATO} · {franjaActual.label}
-              </div>
-            )}
-
             {hayFiltroActivo && (
               <button onClick={resetFiltros} style={{ padding: '3px 8px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#555' }}>↺ Limpiar</button>
             )}
@@ -368,10 +361,30 @@ function MapaPage() {
 
           <div style={{ flex: 1 }} />
 
-          {/* FO Global */}
+          {/* FO Global + Franja juntos */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
             🚐 {foStr} pax/grp
+            {franjaActual && (
+              <span style={{ borderLeft: `1px solid ${foColor}`, paddingLeft: 8, marginLeft: 2 }}>
+                {franjaActual.label}
+              </span>
+            )}
           </div>
+
+          {/* Check revisado al lado de Cerrar */}
+          {filtroVuelo !== 'TODOS' && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', background: vuelosRevisados.has(filtroVuelo) ? '#e8f5e9' : '#f5f5f5', border: `1px solid ${vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#ddd'}`, borderRadius: 20, padding: '3px 8px', color: vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#555', fontWeight: 600 }}>
+              <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={() => {
+                setVuelosRevisados(prev => {
+                  const nuevo = new Set(prev)
+                  if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
+                  else nuevo.add(filtroVuelo)
+                  return nuevo
+                })
+              }} />
+              ✓ Rev.
+            </label>
+          )}
 
           <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✕ Cerrar</button>
         </div>
