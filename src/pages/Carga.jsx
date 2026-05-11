@@ -202,7 +202,12 @@ function Carga() {
   const [agrupando, setAgrupando] = useState(false)
   const [calculandoETA, setCalculandoETA] = useState(false)
   const [etaResumen, setEtaResumen] = useState(null)
-  const [resumenData, setResumenData] = useState(null)
+  const [resumenData, setResumenData] = useState(() => {
+  try {
+    const raw = localStorage.getItem('resumenData')
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+})
   const [mensaje, setMensaje] = useState('')
   const [showCols, setShowCols] = useState(false)
   const [filtros, setFiltros] = useState({})
@@ -246,6 +251,7 @@ function Carga() {
       setMensaje('')
       setFiltros({})
       setResumenData(null)
+      localStorage.removeItem('resumenData')
       localStorage.removeItem('cargaData')
       localStorage.removeItem('mapaData')
     }
@@ -496,6 +502,7 @@ function Carga() {
 
       setDatos(conNumeros)
       setResumenData(resumen)
+      localStorage.setItem('resumenData', JSON.stringify(resumen))
       setMensaje(`✅ ${gruposE.size} grupos E, ${gruposS.size} grupos S`)
 
     } catch (err) {
