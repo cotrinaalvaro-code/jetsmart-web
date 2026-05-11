@@ -430,11 +430,12 @@ function Carga() {
       }
     })
 // JZ7800 → crear automáticamente salida JZ7801 fecha+2
+    const filasExtra = []
     filasProcesadas.forEach(f => {
       if (f.col4_es === 'E' && (f.col9_vuelo||'').toUpperCase() === 'JZ7800') {
         const fechaS801 = new Date(fechaSig)
         fechaS801.setDate(fechaS801.getDate() + 2)
-        filasProcesadas.push({
+        filasExtra.push({
           ...f,
           uid: `${f.col1_dni}_S_JZ7801`,
           col4_es: 'S',
@@ -449,6 +450,8 @@ function Carga() {
         })
       }
     })
+    filasProcesadas.push(...filasExtra)
+        
     filasProcesadas.sort((a, b) => {
       const ha = horaAMin(a.col10_hato), hb = horaAMin(b.col10_hato)
       if (ha !== hb) return ha - hb
