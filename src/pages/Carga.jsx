@@ -100,7 +100,7 @@ const calcularHATO = (rept, vuelo) => {
   if (!rept) return rept
   const reptHH = Math.floor(horaAMin(rept) / 60)
   let resta = 30
-  if (vuelo && vuelo.toUpperCase() === 'JZ7800') resta = 40
+  if (vuelo && vuelo.toUpperCase().replace(/\s+/g,'') === 'JZ7800') resta = 40
   else if (reptHH < 6) resta = 20
   return restarMins(rept, resta)
 }
