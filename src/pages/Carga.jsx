@@ -539,6 +539,7 @@ function Carga() {
       })
       setDatos(datosActualizados)
       localStorage.setItem('cargaData', JSON.stringify(datosActualizados))
+      window.dispatchEvent(new StorageEvent('storage', { key: 'cargaData', newValue: JSON.stringify(datosActualizados) }))
       setEtaResumen(resumen)
       setMensaje(`✅ ETA calculado — ${resumen.total} servicios | Hist.exacto: ${resumen.histExacto} | Hist.agrup: ${resumen.histAgrupado} | TomTom: ${resumen.tomtom} | GPS: ${resumen.soloGPS}`)
     } catch (err) {
