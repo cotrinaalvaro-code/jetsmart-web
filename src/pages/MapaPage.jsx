@@ -334,7 +334,7 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           
           {/* Factor de ocupación en tiempo real */}
           {(() => {
-            const activos = datosFiltrados.filter(d => d.col23_grupo)
+            const activos = datosActivos.filter(d => d.col23_grupo)
             const grupos = [...new Set(activos.map(d => d.col23_grupo))]
             const totalPax = activos.length
             const totalVehiculos = grupos.length
@@ -413,7 +413,18 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
                       </span>
                     )}
                     {!combinado && (
-                      <span style={{ fontSize: '10px', color: '#888' }}>{vuelosGrupo[0]}</span>
+                      <>
+                        <span style={{ fontSize: '10px', color: '#888' }}>{vuelosGrupo[0]}</span>
+                        {miembros[0]?.col4_es === 'E' && (() => {
+                          const vueloS = datos.find(x => x.col1_dni === miembros[0].col1_dni && x.col4_es === 'S')
+                          return vueloS ? (
+                            <button onClick={() => { setFiltroVuelo(vueloS.col9_vuelo); setFiltroES('S'); setFiltroHATO('TODOS') }}
+                              style={{ fontSize: '9px', padding: '1px 5px', border: '1px solid #1565c0', borderRadius: '3px', background: '#e3f2fd', color: '#1565c0', cursor: 'pointer' }}>
+                              ◀ S: {vueloS.col9_vuelo}
+                            </button>
+                          ) : null
+                        })()}
+                      </>
                     )}
                     <span style={{ fontSize: '11px', color: '#888' }}>{miembros[0]?.col8_prov}</span>
                     <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>{miembros.length} pax</span>
