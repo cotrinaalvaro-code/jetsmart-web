@@ -33,7 +33,6 @@ function Navbar() {
       height: '52px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
     }}>
-      {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '20px' }}>✈</span>
         <span style={{ color: '#1a2235', fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' }}>
@@ -41,7 +40,6 @@ function Navbar() {
         </span>
       </div>
 
-      {/* Nav links */}
       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
         <button style={navStyle('/dashboard')} onClick={() => navigate('/dashboard')}>
           Dashboard
@@ -51,7 +49,7 @@ function Navbar() {
         </button>
         <button style={navStyle('/tripulantes')} onClick={() => navigate('/tripulantes')}>
           Tripulantes
-        </button> 
+        </button>
         <button style={navStyle('/configuracion')} onClick={() => navigate('/configuracion')}>
           ⚙️ Config
         </button>
@@ -61,9 +59,11 @@ function Navbar() {
         <button style={navStyle('/traslados')} onClick={() => navigate('/traslados')}>
           🚐 Traslados
         </button>
+        <button style={navStyle('/historico-eta')} onClick={() => navigate('/historico-eta')}>
+          📋 Histórico ETA
+        </button>
       </div>
 
-      {/* Logout */}
       <button
         onClick={handleLogout}
         style={{
