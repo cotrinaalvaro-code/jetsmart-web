@@ -407,8 +407,13 @@ function Carga() {
       }
 
       if (grupo.fltS) {
-        let fechaS = new Date(fechaSig)
-        if (horaAMin(ckout) <= 110) fechaS.setDate(fechaS.getDate() + 1)
+  let fechaS = new Date(fechaSig)
+  const vueloS = (grupo.fltS || '').toUpperCase()
+  if (vueloS === 'JZ7730') {
+    fechaS.setDate(fechaS.getDate() + 1)
+  } else if (vueloS !== 'JZ7801') {
+    if (horaAMin(ckout) <= 110) fechaS.setDate(fechaS.getDate() + 1)
+  }
         filasProcesadas.push({
           uid: `${id}_S_${key}`, activo: true, enBD, grpIdx, sortKey: grpIdx + 10000,
           col1_dni: id, col2_num: '', col3_fecha: formatFecha(fechaS),
@@ -424,7 +429,26 @@ function Carga() {
         })
       }
     })
-
+// JZ7800 → crear automáticamente salida JZ7801 fecha+2
+    filasProcesadas.forEach(f => {
+      if (f.col4_es === 'E' && (f.col9_vuelo||'').toUpperCase() === 'JZ7800') {
+        const fechaS801 = new Date(fechaSig)
+        fechaS801.setDate(fechaS801.getDate() + 2)
+        filasProcesadas.push({
+          ...f,
+          uid: `${f.col1_dni}_S_JZ7801`,
+          col4_es: 'S',
+          col9_vuelo: 'JZ7801',
+          col10_hato: '08:30',
+          col6_hreal: '08:30',
+          col3_fecha: formatFecha(fechaS801),
+          col5_serv: '',
+          col23_grupo: '',
+          col24_orden: '',
+          sortKey: f.sortKey + 20000,
+        })
+      }
+    })
     filasProcesadas.sort((a, b) => {
       const ha = horaAMin(a.col10_hato), hb = horaAMin(b.col10_hato)
       if (ha !== hb) return ha - hb
