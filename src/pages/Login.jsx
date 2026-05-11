@@ -165,16 +165,16 @@ function Login() {
           </h2>
           <p style={{ fontSize: '14px', opacity: 0.7, margin: '0 0 8px' }}>by Directo App</p>
           <p style={{ fontSize: '15px', opacity: 0.85, lineHeight: '1.7', margin: '0 0 36px' }}>
-            Planifica, agrupa y optimiza los traslados de tripulación hacia el Aeropuerto Internacional Jorge Chávez.
+            Planifica, agrupa y optimiza los traslados de tripulación desde y hacia el Aeropuerto Internacional Jorge Chávez.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
             {[
-              { icon: '⚡', text: 'Agrupamiento automático por corredor y distancia' },
-              { icon: '🕐', text: 'Motor ETA con historial exacto de rutas' },
-              { icon: '📊', text: 'Importación directa del MOV TENTATIVO' },
-              { icon: '🗺️', text: 'Visualización geográfica de rutas en tiempo real' },
-              { icon: '📋', text: 'Histórico GeoVictoria para mejorar precisión ETA' },
-            ].map(item => (
+  { icon: '⚡', text: 'Agrupamiento automático por corredor y distancia' },
+  { icon: '🕐', text: 'Cálculo de tiempos de traslado con análisis de tráfico en vivo y rutas históricas.' },
+  { icon: '📊', text: 'Importación automática de la programación de vuelos y tripulación.' },
+  { icon: '🗺️', text: 'Mapa interactivo con gestión de grupos en tiempo real para maximizar la eficiencia operativa.' },
+  { icon: '📋', text: 'Base de datos histórica de rutas que mejora automáticamente la precisión de cada traslado.' },
+].map(item => (
               <div key={item.text} style={{
                 display: 'flex', alignItems: 'flex-start', gap: '12px',
                 background: 'rgba(255,255,255,0.1)', borderRadius: '8px',
