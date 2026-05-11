@@ -165,9 +165,9 @@ function Login() {
           </h2>
           <p style={{ fontSize: '14px', opacity: 0.7, margin: '0 0 8px' }}>by Directo App</p>
           <p style={{ fontSize: '15px', opacity: 0.85, lineHeight: '1.7', margin: '0 0 36px' }}>
-            Planifica, agrupa y optimiza los traslados de tripulación desde y hacia el Aeropuerto Internacional Jorge Chávez.
+            Planifica, agrupa y optimiza los traslados de tripulación hacia el Aeropuerto Internacional Jorge Chávez.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', textAlign: 'left', marginTop: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
             {[
   { icon: '⚡', text: 'Agrupamiento automático por corredor y distancia' },
   { icon: '🕐', text: 'Cálculo de tiempos de traslado con análisis de tráfico en vivo y rutas históricas.' },
@@ -176,13 +176,13 @@ function Login() {
   { icon: '📋', text: 'Base de datos histórica de rutas que mejora automáticamente la precisión de cada traslado.' },
 ].map(item => (
               <div key={item.text} style={{
-  display: 'flex', alignItems: 'flex-start', gap: '10px',
-  background: 'rgba(255,255,255,0.12)', borderRadius: '10px',
-  padding: '14px 16px'
-}}>
-  <span style={{ fontSize: '20px', flexShrink: 0 }}>{item.icon}</span>
-  <span style={{ fontSize: '12px', opacity: 0.9, lineHeight: '1.6' }}>{item.text}</span>
-</div>
+                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                background: 'rgba(255,255,255,0.1)', borderRadius: '8px',
+                padding: '12px 16px'
+              }}>
+                <span style={{ fontSize: '18px' }}>{item.icon}</span>
+                <span style={{ fontSize: '13px', opacity: 0.9, lineHeight: '1.5' }}>{item.text}</span>
+              </div>
             ))}
           </div>
         </div>
