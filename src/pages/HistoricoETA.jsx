@@ -190,7 +190,16 @@ function HistoricoETA() {
           if (existentes.has(reserva)) { cntDupl++; continue }
           existentes.add(reserva)
 
-          const fecha = String(r[iFecha]||'').trim()
+          const fechaRaw = r[iFecha]
+let fecha = ''
+if (fechaRaw) {
+  if (typeof fechaRaw === 'number') {
+    const d = new Date((fechaRaw - 25569) * 86400 * 1000)
+    fecha = `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`
+  } else {
+    fecha = String(fechaRaw).trim()
+  }
+}
           const hora  = String(r[iHora]||'').trim()
           const zona  = String(r[iZona]||'').trim()
           const ato   = String(r[iAto]||'').trim()
