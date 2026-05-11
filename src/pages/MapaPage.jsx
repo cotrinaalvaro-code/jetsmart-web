@@ -334,9 +334,9 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           
           {/* Factor de ocupación en tiempo real */}
           {(() => {
-            const activosES = datosActivos.filter(d => d.col23_grupo)
-const gruposE = [...new Set(datosActivos.filter(d => d.col23_grupo && d.col4_es === 'E').map(d => d.col23_grupo))]
-const totalPax = activosES.length
+            const activosE = datosActivos.filter(d => d.col23_grupo && d.col4_es === 'E')
+const gruposE = [...new Set(activosE.map(d => d.col23_grupo))]
+const totalPax = activosE.length
 const totalVehiculos = gruposE.length
             const fo = totalVehiculos > 0 ? (totalPax / totalVehiculos).toFixed(2) : '0.00'
             const foNum = parseFloat(fo)
