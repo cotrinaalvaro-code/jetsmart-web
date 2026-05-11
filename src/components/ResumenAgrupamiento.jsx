@@ -291,8 +291,8 @@ export default function ResumenAgrupamiento({ resumen }) {
   const color = getColor(factorOcup)
   const label = getLabel(factorOcup)
   const fechaStr = resumen.fecha
-    ? resumen.fecha.toLocaleDateString('es-PE') + ' ' +
-      resumen.fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(resumen.fecha).toLocaleDateString('es-PE') + ' ' +
+      new Date(resumen.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : ''
 
   return (
