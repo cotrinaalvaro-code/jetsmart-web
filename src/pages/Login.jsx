@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 
+const DIRECTO_BLUE = '#1a3fa0'
+const DIRECTO_LIGHT = '#e8eef8'
+
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -33,16 +36,27 @@ function Login() {
       }}>
         <div style={{ width: '100%', maxWidth: '360px' }}>
 
-          {/* Logo */}
+          {/* Logo Rutas Crew */}
           <div style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '28px' }}>✈</span>
-              <span style={{ fontSize: '26px', fontWeight: '800', color: '#1a2235' }}>
-                Jet<span style={{ color: '#00b4d8' }}>Smart</span>
-              </span>
+              {/* Logo Directo estilo puntitos */}
+              <div style={{ position: 'relative', width: '36px', height: '36px' }}>
+                <div style={{ position: 'absolute', top: 0, left: 4, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE, opacity: 0.4 }} />
+                <div style={{ position: 'absolute', top: 0, left: 14, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE, opacity: 0.7 }} />
+                <div style={{ position: 'absolute', top: 0, left: 24, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE }} />
+                <div style={{ position: 'absolute', top: 12, left: 4, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE, opacity: 0.7 }} />
+                <div style={{ position: 'absolute', top: 12, left: 14, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE }} />
+                <div style={{ position: 'absolute', top: 24, left: 4, width: 8, height: 8, borderRadius: '50%', background: DIRECTO_BLUE }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: DIRECTO_BLUE, lineHeight: 1 }}>
+                  Rutas <span style={{ color: '#00b4d8' }}>Crew</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>by Directo App</div>
+              </div>
             </div>
-            <p style={{ color: '#888', fontSize: '14px', margin: 0 }}>
-              Sistema de Traslados de Tripulación
+            <p style={{ color: '#888', fontSize: '13px', margin: '8px 0 0' }}>
+              Sistema de Traslados de Tripulación ✈
             </p>
           </div>
 
@@ -75,14 +89,13 @@ function Login() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="correo@jetsmart.com"
+                placeholder="correo@empresa.com"
                 required
                 style={{
                   width: '100%', padding: '10px 12px',
                   border: '1px solid #ddd', borderRadius: '6px',
                   fontSize: '14px', color: '#333', outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s'
+                  boxSizing: 'border-box', transition: 'border-color 0.2s'
                 }}
               />
             </div>
@@ -111,7 +124,7 @@ function Login() {
               disabled={loading}
               style={{
                 width: '100%', padding: '11px',
-                background: loading ? '#90caf9' : '#00b4d8',
+                background: loading ? '#90a4c8' : DIRECTO_BLUE,
                 color: 'white', border: 'none', borderRadius: '6px',
                 fontSize: '14px', fontWeight: '700',
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -123,31 +136,35 @@ function Login() {
           </form>
 
           <p style={{ color: '#bbb', fontSize: '12px', textAlign: 'center', marginTop: '32px' }}>
-            © 2026 JetSmart Perú · Operaciones Lima
+            © 2026 Directo App · Operaciones Lima
           </p>
         </div>
       </div>
 
       {/* Lado derecho — Panel */}
       <div style={{
-        flex: 1, background: 'linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #00b4d8 100%)',
+        flex: 1,
+        background: `linear-gradient(135deg, #0d1f4e 0%, ${DIRECTO_BLUE} 50%, #00b4d8 100%)`,
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center',
         padding: '48px', color: 'white'
       }}>
-        <div style={{ maxWidth: '380px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '400px', textAlign: 'center' }}>
           <div style={{ fontSize: '72px', marginBottom: '24px' }}>✈</div>
-          <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 16px', lineHeight: '1.3', color: 'white' }}>
-            Gestión Inteligente de Traslados
+          <h2 style={{ fontSize: '30px', fontWeight: '800', margin: '0 0 8px', lineHeight: '1.2', color: 'white' }}>
+            Rutas Crew
           </h2>
-          <p style={{ fontSize: '15px', opacity: 0.85, lineHeight: '1.7', margin: '0 0 32px' }}>
+          <p style={{ fontSize: '14px', opacity: 0.7, margin: '0 0 8px' }}>by Directo App</p>
+          <p style={{ fontSize: '15px', opacity: 0.85, lineHeight: '1.7', margin: '0 0 36px' }}>
             Planifica, agrupa y optimiza los traslados de tripulación hacia el Aeropuerto Internacional Jorge Chávez.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
             {[
               { icon: '⚡', text: 'Agrupamiento automático por corredor y distancia' },
+              { icon: '🕐', text: 'Motor ETA con historial exacto de rutas' },
               { icon: '📊', text: 'Importación directa del MOV TENTATIVO' },
-              { icon: '🗺️', text: 'Visualización geográfica de rutas' },
+              { icon: '🗺️', text: 'Visualización geográfica de rutas en tiempo real' },
+              { icon: '📋', text: 'Histórico GeoVictoria para mejorar precisión ETA' },
             ].map(item => (
               <div key={item.text} style={{
                 display: 'flex', alignItems: 'flex-start', gap: '12px',
