@@ -57,6 +57,7 @@ const iconoATO = L.divIcon({
 })
 
 function MapaPage() {
+  const [vuelosRevisados, setVuelosRevisados] = useState(new Set())
   const [datos, setDatos] = useState([])
   const [filtroVuelo, setFiltroVuelo] = useState('TODOS')
   const [filtroES, setFiltroES] = useState('TODOS')
@@ -288,7 +289,7 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
   }
 }}>
               <option value="TODOS">Todos</option>
-              {vuelosUnicos.map(v => <option key={v} value={v}>{v}</option>)}
+              {vuelosUnicos.map(v => <option key={v} value={v}>{vuelosRevisados.has(v) ? '✓ ' : ''}{v}</option>)}
             </select>
 
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>E/S:</span>
@@ -330,6 +331,39 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           </div>
 
           <div style={{ flex: 1 }} />
+          
+          {/* Factor de ocupación en tiempo real */}
+          {(() => {
+            const activos = datosFiltrados.filter(d => d.col23_grupo)
+            const grupos = [...new Set(activos.map(d => d.col23_grupo))]
+            const totalPax = activos.length
+            const totalVehiculos = grupos.length
+            const fo = totalVehiculos > 0 ? (totalPax / totalVehiculos).toFixed(2) : '0.00'
+            const foNum = parseFloat(fo)
+            const foBg = foNum >= 1.80 ? '#e8f5e9' : foNum >= 1.60 ? '#e3f2fd' : foNum >= 1.55 ? '#fff3e0' : '#ffebee'
+            const foColor = foNum >= 1.80 ? '#2e7d32' : foNum >= 1.60 ? '#1565c0' : foNum >= 1.55 ? '#e65100' : '#c62828'
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
+                🚐 {fo} pax/grp
+              </div>
+            )
+          })()}
+
+          {/* Check vuelo revisado */}
+          {filtroVuelo !== 'TODOS' && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', background: vuelosRevisados.has(filtroVuelo) ? '#e8f5e9' : '#f5f5f5', border: `1px solid ${vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#ddd'}`, borderRadius: 20, padding: '3px 10px', color: vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#555', fontWeight: 600 }}>
+              <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={() => {
+                setVuelosRevisados(prev => {
+                  const nuevo = new Set(prev)
+                  if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
+                  else nuevo.add(filtroVuelo)
+                  return nuevo
+                })
+              }} />
+              ✓ Revisado
+            </label>
+          )}
+
           <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✕ Cerrar</button>
         </div>
       </div>
