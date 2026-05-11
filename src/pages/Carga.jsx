@@ -230,7 +230,18 @@ function Carga() {
       if (e.key === 'mapaData') {
         try {
           const nuevoDatos = JSON.parse(e.newValue)
-          if (nuevoDatos) setDatos(sortearDatos(nuevoDatos))
+          if (nuevoDatos) {
+            const ordenados = sortearDatos(nuevoDatos)
+            setDatos(ordenados)
+            // Recalcular resumen con los nuevos datos
+            const resumen = calcularResumen(ordenados.map(r => ({
+              es: r.col4_es, vuelo: r.col9_vuelo, pax: r.col7_pax,
+              prov: r.col8_prov, orden: Number(r.col24_orden) || 0,
+              serv: Number(r.col5_serv) || 0, corredor: r.col25_corredor,
+            })))
+            setResumenData(resumen)
+            localStorage.setItem('resumenData', JSON.stringify(resumen))
+          }
         } catch {}
       }
     }
