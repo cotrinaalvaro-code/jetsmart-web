@@ -420,9 +420,9 @@ if (fechaRaw) {
         <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
           {[
             { label: 'Servicios en Histórico', valor: stats.historico.toLocaleString(), color: '#1565c0', icon: '📦' },
-            { label: 'Pares ETA N0A', valor: stats.n0a.toLocaleString(), color: '#2e7d32', icon: '🎯' },
-            { label: 'Pares ETA N0B', valor: stats.n0b.toLocaleString(), color: '#558b2f', icon: '📊' },
-            { label: 'Caché TomTom', valor: stats.tomtom.toLocaleString(), color: '#e65100', icon: '🗺️' },
+            { label: 'Rutas con historial exacto', valor: stats.n0a.toLocaleString(), color: '#2e7d32', icon: '🎯' },
+{ label: 'Rutas con historial agrupado', valor: stats.n0b.toLocaleString(), color: '#558b2f', icon: '📊' },
+{ label: 'Rutas via API TomTom', valor: stats.tomtom.toLocaleString(), color: '#e65100', icon: '🗺️' },
           ].map(s => (
             <div key={s.label} style={{ border: '1px solid #e0e0e0', borderRadius: 10, padding: '20px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
