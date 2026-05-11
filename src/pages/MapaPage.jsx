@@ -334,7 +334,7 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           
           {/* Factor de ocupación en tiempo real */}
           {(() => {
-            const activosE = datosActivos.filter(d => d.col23_grupo && d.col4_es === 'E')
+            const activosE = datos.filter(d => d.activo && d.col23_grupo && d.col4_es === 'E')
 const gruposE = [...new Set(activosE.map(d => d.col23_grupo))]
 const totalPax = activosE.length
 const totalVehiculos = gruposE.length
