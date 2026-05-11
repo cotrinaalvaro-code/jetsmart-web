@@ -434,7 +434,7 @@ function Carga() {
     console.log('Buscando JZ7800 en', filasProcesadas.length, 'filas')
     console.log('Vuelos E:', [...new Set(filasProcesadas.filter(f=>f.col4_es==='E').map(f=>f.col9_vuelo))])
     filasProcesadas.forEach(f => {
-      if (f.col4_es === 'E' && (f.col9_vuelo||'').toUpperCase() === 'JZ7800') {
+      if (f.col4_es === 'E' && (f.col9_vuelo||'').toUpperCase().replace(/\s+/g,'') === 'JZ7800') {
         const fechaS801 = new Date(fechaSig)
         fechaS801.setDate(fechaS801.getDate() + 2)
         filasExtra.push({
