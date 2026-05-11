@@ -364,12 +364,12 @@ function MapaPage() {
           {/* FO Global + Franja juntos */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
             🚐 {foStr} pax/grp
-            {franjaActual && (
-              <span style={{ borderLeft: `1px solid ${foColor}`, paddingLeft: 8, marginLeft: 2 }}>
-                {franjaActual.label}
-              </span>
-            )}
           </div>
+          {franjaActual && (
+            <div style={{ background: franjaActual.bg, color: franjaActual.color, border: `1px solid ${franjaActual.color}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+              {franjaActual.label}
+            </div>
+          )}
 
           {/* Check revisado al lado de Cerrar */}
           {filtroVuelo !== 'TODOS' && (
