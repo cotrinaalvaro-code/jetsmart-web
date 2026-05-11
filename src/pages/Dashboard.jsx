@@ -11,7 +11,7 @@ function Dashboard() {
       const [{ count: t }, { count: v }, { count: tr }] = await Promise.all([
         supabase.from('tripulantes').select('*', { count: 'exact', head: true }),
         supabase.from('vehiculos').select('*', { count: 'exact', head: true }),
-        supabase.from('traslados').select('*', { count: 'exact', head: true })
+        supabase.from('historico').select('*', { count: 'exact', head: true })
       ])
       setStats({ tripulantes: t || 0, vehiculos: v || 0, traslados: tr || 0 })
     }
@@ -21,7 +21,7 @@ function Dashboard() {
   const cards = [
     { icon: '👨‍✈️', label: 'Tripulantes', valor: stats.tripulantes, color: '#1565c0', bg: '#e3f2fd', path: '/tripulantes' },
     { icon: '🚐', label: 'Vehículos', valor: stats.vehiculos, color: '#2e7d32', bg: '#e8f5e9', path: '/traslados' },
-    { icon: '📋', label: 'Traslados', valor: stats.traslados, color: '#e65100', bg: '#fff3e0', path: '/traslados' },
+    { icon: '📋', label: 'Histórico', valor: stats.traslados, color: '#e65100', bg: '#fff3e0', path: '/historico-eta' },
   ]
 
   return (
