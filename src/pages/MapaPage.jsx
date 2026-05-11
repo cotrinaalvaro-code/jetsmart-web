@@ -35,7 +35,6 @@ const getGrupoColor = (grp, gruposList) => {
   return GRUPO_COLORES[idx % GRUPO_COLORES.length] || '#888'
 }
 
-// Detectar si un grupo tiene vuelos combinados
 const esGrupoCombinado = (miembros) => {
   const vuelos = new Set(miembros.map(m => (m.col9_vuelo || '').trim()).filter(Boolean))
   return vuelos.size > 1
@@ -118,46 +117,42 @@ function MapaPage() {
   })
   const provsUnicas = [...new Set(datosParaProv.map(d => d.col8_prov))].filter(Boolean).sort()
 
-  // ── Datos filtrados — incluye grupos combinados completos ──────────────────
-  // Para cada grupo combinado, identificar cuál es el vuelo principal (H.ATO más temprano)
-const vuéloPrincipalDeGrupo = {}
-datosActivos.forEach(d => {
-  if (!d.col23_grupo || d.col4_es !== 'E') return
-  const grp = d.col23_grupo
-  const min = horaAMin(d.col10_hato)
-  if (vuéloPrincipalDeGrupo[grp] === undefined || min < vuéloPrincipalDeGrupo[grp].min) {
-    vuéloPrincipalDeGrupo[grp] = { min, vuelo: (d.col9_vuelo || '').trim() }
-  }
-})
+  const vuéloPrincipalDeGrupo = {}
+  datosActivos.forEach(d => {
+    if (!d.col23_grupo || d.col4_es !== 'E') return
+    const grp = d.col23_grupo
+    const min = horaAMin(d.col10_hato)
+    if (vuéloPrincipalDeGrupo[grp] === undefined || min < vuéloPrincipalDeGrupo[grp].min) {
+      vuéloPrincipalDeGrupo[grp] = { min, vuelo: (d.col9_vuelo || '').trim() }
+    }
+  })
 
-const gruposDelVuelo = filtroVuelo !== 'TODOS'
-  ? new Set(
-      datosActivos
-        .filter(d => {
-          if ((d.col9_vuelo || '').trim() !== filtroVuelo) return false
-          if (d.col4_es !== 'E') return false
-          // Solo incluir el grupo si este vuelo ES el vuelo principal del grupo
-          const principal = vuéloPrincipalDeGrupo[d.col23_grupo]
-          return principal && principal.vuelo === filtroVuelo
-        })
-        .map(d => d.col23_grupo)
-        .filter(Boolean)
-    )
-  : null
+  const gruposDelVuelo = filtroVuelo !== 'TODOS'
+    ? new Set(
+        datosActivos
+          .filter(d => {
+            if ((d.col9_vuelo || '').trim() !== filtroVuelo) return false
+            if (d.col4_es !== 'E') return false
+            const principal = vuéloPrincipalDeGrupo[d.col23_grupo]
+            return principal && principal.vuelo === filtroVuelo
+          })
+          .map(d => d.col23_grupo)
+          .filter(Boolean)
+      )
+    : null
 
   const datosFiltrados = datosActivos.filter(d => {
-  if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
-  if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
-  if (filtroVuelo !== 'TODOS') {
-    const tieneVuelo = (d.col9_vuelo || '').trim() === filtroVuelo
-    const estaEnGrupoCombinado = d.col23_grupo && gruposDelVuelo && gruposDelVuelo.has(d.col23_grupo)
-    if (!tieneVuelo && !estaEnGrupoCombinado) return false
-    // No aplicar filtro H.ATO a miembros de grupos combinados con vuelo distinto
-    if (filtroHATO !== 'TODOS' && !tieneVuelo && estaEnGrupoCombinado) return true
-  }
-  if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
-  return true
-})
+    if (filtroES !== 'TODOS' && d.col4_es !== filtroES) return false
+    if (filtroProv !== 'TODOS' && d.col8_prov !== filtroProv) return false
+    if (filtroVuelo !== 'TODOS') {
+      const tieneVuelo = (d.col9_vuelo || '').trim() === filtroVuelo
+      const estaEnGrupoCombinado = d.col23_grupo && gruposDelVuelo && gruposDelVuelo.has(d.col23_grupo)
+      if (!tieneVuelo && !estaEnGrupoCombinado) return false
+      if (filtroHATO !== 'TODOS' && !tieneVuelo && estaEnGrupoCombinado) return true
+    }
+    if (filtroHATO !== 'TODOS' && d.col10_hato !== filtroHATO) return false
+    return true
+  })
 
   const hatoAnclaGrupo = {}
   datosFiltrados.forEach(d => {
@@ -260,6 +255,25 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
     setMoverDesde(null)
   }
 
+  // FO global
+  const activosE = datos.filter(d => d.activo && d.col23_grupo && d.col4_es === 'E')
+  const gruposE = [...new Set(activosE.map(d => d.col23_grupo))]
+  const foNum = gruposE.length > 0 ? Math.round((activosE.length / gruposE.length) * 100) / 100 : 0
+  const foStr = foNum.toFixed(2)
+  const foBg = foNum >= 1.80 ? '#e8f5e9' : foNum >= 1.60 ? '#e3f2fd' : foNum >= 1.55 ? '#fff3e0' : '#ffebee'
+  const foColor = foNum >= 1.80 ? '#2e7d32' : foNum >= 1.60 ? '#1565c0' : foNum >= 1.55 ? '#e65100' : '#c62828'
+
+  // Franja del H.ATO seleccionado
+  const franjaActual = (() => {
+    if (filtroHATO === 'TODOS') return null
+    const h = parseInt(filtroHATO.split(':')[0])
+    if (h < 6)  return { label: 'Valle 🌙', bg: '#e8f5e9', color: '#2e7d32' }
+    if (h < 9)  return { label: 'Punta AM 🔴', bg: '#ffebee', color: '#c62828' }
+    if (h < 13) return { label: 'Intermedio bajo 🟡', bg: '#fff8e1', color: '#f57f17' }
+    if (h < 16) return { label: 'Intermedio alto 🟠', bg: '#fff3e0', color: '#e65100' }
+    return { label: 'Punta PM 🔴', bg: '#ffebee', color: '#c62828' }
+  })()
+
   const selectStyle = { padding: '4px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', color: '#333', background: 'white', cursor: 'pointer' }
 
   return (
@@ -276,21 +290,36 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Vuelo:</span>
             <select style={selectStyle} value={filtroVuelo} onChange={e => {
-  const vuelo = e.target.value
-  setFiltroVuelo(vuelo)
-  setMoverDesde(null)
-  setFiltroHATO('TODOS') // siempre resetear H.ATO al cambiar vuelo
-  if (vuelo !== 'TODOS') {
-    const hato = datosActivos.find(d => 
-      (d.col9_vuelo || '').trim() === vuelo && 
-      (filtroES === 'TODOS' || d.col4_es === filtroES)
-    )?.col10_hato
-    if (hato) setFiltroHATO(hato)
-  }
-}}>
+              const vuelo = e.target.value
+              setFiltroVuelo(vuelo)
+              setMoverDesde(null)
+              setFiltroHATO('TODOS')
+              if (vuelo !== 'TODOS') {
+                const hato = datosActivos.find(d =>
+                  (d.col9_vuelo || '').trim() === vuelo &&
+                  (filtroES === 'TODOS' || d.col4_es === filtroES)
+                )?.col10_hato
+                if (hato) setFiltroHATO(hato)
+              }
+            }}>
               <option value="TODOS">Todos</option>
               {vuelosUnicos.map(v => <option key={v} value={v}>{vuelosRevisados.has(v) ? '✓ ' : ''}{v}</option>)}
             </select>
+
+            {/* Check revisado junto al filtro de vuelo */}
+            {filtroVuelo !== 'TODOS' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', background: vuelosRevisados.has(filtroVuelo) ? '#e8f5e9' : '#f5f5f5', border: `1px solid ${vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#ddd'}`, borderRadius: 20, padding: '3px 8px', color: vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#555', fontWeight: 600 }}>
+                <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={() => {
+                  setVuelosRevisados(prev => {
+                    const nuevo = new Set(prev)
+                    if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
+                    else nuevo.add(filtroVuelo)
+                    return nuevo
+                  })
+                }} />
+                ✓ Rev.
+              </label>
+            )}
 
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>E/S:</span>
             <select style={selectStyle} value={filtroES} onChange={e => {
@@ -325,44 +354,24 @@ const gruposDelVuelo = filtroVuelo !== 'TODOS'
               {provsUnicas.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
+            {/* Franja horaria */}
+            {franjaActual && (
+              <div style={{ background: franjaActual.bg, color: franjaActual.color, border: `1px solid ${franjaActual.color}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+                {filtroHATO} · {franjaActual.label}
+              </div>
+            )}
+
             {hayFiltroActivo && (
               <button onClick={resetFiltros} style={{ padding: '3px 8px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#555' }}>↺ Limpiar</button>
             )}
           </div>
 
           <div style={{ flex: 1 }} />
-          
-          {/* Factor de ocupación en tiempo real */}
-          {(() => {
-            const activosE = datos.filter(d => d.activo && d.col23_grupo && d.col4_es === 'E')
-const gruposE = [...new Set(activosE.map(d => d.col23_grupo))]
-const totalPax = activosE.length
-const totalVehiculos = gruposE.length
-            const fo = totalVehiculos > 0 ? (totalPax / totalVehiculos).toFixed(2) : '0.00'
-            const foNum = parseFloat(fo)
-            const foBg = foNum >= 1.80 ? '#e8f5e9' : foNum >= 1.60 ? '#e3f2fd' : foNum >= 1.55 ? '#fff3e0' : '#ffebee'
-            const foColor = foNum >= 1.80 ? '#2e7d32' : foNum >= 1.60 ? '#1565c0' : foNum >= 1.55 ? '#e65100' : '#c62828'
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
-                🚐 {fo} pax/grp
-              </div>
-            )
-          })()}
 
-          {/* Check vuelo revisado */}
-          {filtroVuelo !== 'TODOS' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', background: vuelosRevisados.has(filtroVuelo) ? '#e8f5e9' : '#f5f5f5', border: `1px solid ${vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#ddd'}`, borderRadius: 20, padding: '3px 10px', color: vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#555', fontWeight: 600 }}>
-              <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={() => {
-                setVuelosRevisados(prev => {
-                  const nuevo = new Set(prev)
-                  if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
-                  else nuevo.add(filtroVuelo)
-                  return nuevo
-                })
-              }} />
-              ✓ Revisado
-            </label>
-          )}
+          {/* FO Global */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
+            🚐 {foStr} pax/grp
+          </div>
 
           <button onClick={() => window.close()} style={{ padding: '5px 12px', background: 'white', border: '1px solid #e53935', borderRadius: '6px', color: '#e53935', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✕ Cerrar</button>
         </div>
@@ -393,12 +402,10 @@ const totalVehiculos = gruposE.length
               const color = getGrupoColor(grp, gruposFiltrados)
               const esMoverDestino = moverDesde && moverDesde.grp !== grp
               const combinado = esGrupoCombinado(miembros)
-              // Vuelos únicos del grupo para mostrar en header
               const vuelosGrupo = [...new Set(miembros.map(m => (m.col9_vuelo || '').trim()).filter(Boolean))]
 
               return (
                 <div key={grp} style={{ borderBottom: '2px solid #e0e0e0', background: esMoverDestino ? '#f0f7ff' : 'white' }}>
-                  {/* Header del grupo */}
                   <div style={{
                     padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '8px',
                     background: color + '18', borderBottom: '1px solid ' + color + '33',
@@ -406,7 +413,6 @@ const totalVehiculos = gruposE.length
                   }} onClick={() => esMoverDestino && moverATripulante(moverDesde.uid, grp)}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, flexShrink: 0 }} />
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#1a2235' }}>{grp}</span>
-                    {/* Badge vuelos combinados */}
                     {combinado && (
                       <span style={{ fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px', fontWeight: '600' }}>
                         🔀 {vuelosGrupo.join(' + ')}
@@ -418,7 +424,7 @@ const totalVehiculos = gruposE.length
                         {miembros[0]?.col4_es === 'E' && (() => {
                           const vueloS = datos.find(x => x.col1_dni === miembros[0].col1_dni && x.col4_es === 'S')
                           return vueloS ? (
-                            <button onClick={() => { setFiltroVuelo(vueloS.col9_vuelo); setFiltroES('S'); setFiltroHATO('TODOS') }}
+                            <button onClick={(e) => { e.stopPropagation(); setFiltroVuelo(vueloS.col9_vuelo); setFiltroES('S'); setFiltroHATO('TODOS') }}
                               style={{ fontSize: '9px', padding: '1px 5px', border: '1px solid #1565c0', borderRadius: '3px', background: '#e3f2fd', color: '#1565c0', cursor: 'pointer' }}>
                               ◀ S: {vueloS.col9_vuelo}
                             </button>
@@ -431,7 +437,6 @@ const totalVehiculos = gruposE.length
                     {esMoverDestino && <span style={{ fontSize: '11px', color: '#1565c0', fontWeight: '700' }}>← aquí</span>}
                   </div>
 
-                  {/* Miembros */}
                   {miembros.map((d, idx) => {
                     const nombre = d.col14_nombres?.split('-').slice(1).join('-') || d.col14_nombres
                     const esMover = moverDesde?.uid === d.uid
@@ -442,7 +447,6 @@ const totalVehiculos = gruposE.length
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '11px', fontWeight: '600', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {nombre}
-                            {/* Badge vuelo diferente */}
                             {combinado && (
                               <span style={{ marginLeft: 4, fontSize: '9px', background: esCombinado ? '#fff3e0' : '#e8f5e9', color: esCombinado ? '#e65100' : '#2e7d32', border: `1px solid ${esCombinado ? '#ffcc80' : '#a5d6a7'}`, borderRadius: '3px', padding: '0 3px' }}>
                                 {d.col9_vuelo}
@@ -495,45 +499,39 @@ const totalVehiculos = gruposE.length
               const esMiembroCombinado = grupoCombinado && (d.col9_vuelo || '').trim() !== vuelosGrupo[0]
 
               return (
-                <Marker
-                  key={d.uid}
-                  position={[lat, lng]}
-                  icon={crearIconoNumero(d.col24_orden, color, hayFiltroActivo ? 24 : 16, grupoCombinado)}
-                >
+                <Marker key={d.uid} position={[lat, lng]}
+                  icon={crearIconoNumero(d.col24_orden, color, hayFiltroActivo ? 24 : 16, grupoCombinado)}>
                   <Popup>
-  <div style={{ fontSize: '12px', minWidth: '200px' }}>
-    <strong>{nombre}</strong>
-    {grupoCombinado && (
-      <span style={{ marginLeft: 6, fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px' }}>
-        🔀 Combinado
-      </span>
-    )}
-    <br />
-    <span style={{ color: '#2e7d32', fontWeight: '600' }}>
-      ▶ Entrada · {d.col9_vuelo}
-      {esMiembroCombinado && ' ⚡'}
-    </span>
-    <br />
-    {(() => {
-      const vueloS = datos.find(x => x.col1_dni === d.col1_dni && x.col4_es === 'S')
-      return vueloS ? (
-        <span style={{ color: '#1565c0', fontWeight: '600' }}>
-          ◀ Salida &nbsp;· {vueloS.col9_vuelo}
-          <span style={{ color: '#888', fontWeight: '400' }}> H.ATO: {vueloS.col10_hato}</span>
-        </span>
-      ) : null
-    })()}
-    <br />
-    H.ATO entrada: <strong>{d.col10_hato}</strong><br />
-    Grupo: <strong>{d.col23_grupo}</strong>
-    {grupoCombinado && (
-      <span style={{ color: '#e65100', fontSize: '11px' }}> ({vuelosGrupo.join(' + ')})</span>
-    )}
-    <br />
-    Orden: <strong>{d.col24_orden}</strong> · Prov: <strong>{d.col8_prov}</strong><br />
-    Corredor: <strong>{d.col25_corredor}</strong>
-  </div>
-</Popup>
+                    <div style={{ fontSize: '12px', minWidth: '200px' }}>
+                      <strong>{nombre}</strong>
+                      {grupoCombinado && (
+                        <span style={{ marginLeft: 6, fontSize: '10px', background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80', borderRadius: '4px', padding: '1px 5px' }}>
+                          🔀 Combinado
+                        </span>
+                      )}
+                      <br />
+                      <span style={{ color: '#2e7d32', fontWeight: '600' }}>
+                        ▶ Entrada · {d.col9_vuelo}{esMiembroCombinado && ' ⚡'}
+                      </span>
+                      <br />
+                      {(() => {
+                        const vueloS = datos.find(x => x.col1_dni === d.col1_dni && x.col4_es === 'S')
+                        return vueloS ? (
+                          <span style={{ color: '#1565c0', fontWeight: '600' }}>
+                            ◀ Salida · {vueloS.col9_vuelo}
+                            <span style={{ color: '#888', fontWeight: '400' }}> H.ATO: {vueloS.col10_hato}</span>
+                          </span>
+                        ) : null
+                      })()}
+                      <br />
+                      H.ATO entrada: <strong>{d.col10_hato}</strong><br />
+                      Grupo: <strong>{d.col23_grupo}</strong>
+                      {grupoCombinado && <span style={{ color: '#e65100', fontSize: '11px' }}> ({vuelosGrupo.join(' + ')})</span>}
+                      <br />
+                      Orden: <strong>{d.col24_orden}</strong> · Prov: <strong>{d.col8_prov}</strong><br />
+                      Corredor: <strong>{d.col25_corredor}</strong>
+                    </div>
+                  </Popup>
                 </Marker>
               )
             })}
@@ -545,15 +543,10 @@ const totalVehiculos = gruposE.length
                 .filter(d => d.col21_lat && d.col22_lng)
                 .sort((a, b) => parseInt(a.col24_orden) - parseInt(b.col24_orden))
                 .map(d => [parseFloat(d.col21_lat), parseFloat(d.col22_lng)])
-              const pts = esS
-                ? [[ATO_LAT, ATO_LNG], ...puntosOrdenados]
-                : [...puntosOrdenados, [ATO_LAT, ATO_LNG]]
+              const pts = esS ? [[ATO_LAT, ATO_LNG], ...puntosOrdenados] : [...puntosOrdenados, [ATO_LAT, ATO_LNG]]
               const combinado = esGrupoCombinado(miembros)
               return (
-                <Polyline
-                  key={grp}
-                  positions={pts}
-                  color={color}
+                <Polyline key={grp} positions={pts} color={color}
                   weight={hayFiltroActivo ? 2.5 : 1.5}
                   opacity={hayFiltroActivo ? 0.7 : 0.3}
                   dashArray={combinado ? '8 4' : (hayFiltroActivo ? undefined : '4 4')}
