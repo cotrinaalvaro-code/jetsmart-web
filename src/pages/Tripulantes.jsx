@@ -117,7 +117,14 @@ const fileInputRef = useRef(null)
           lat:           r.lat ? parseFloat(r.lat) : null,
           lng:           r.lng ? parseFloat(r.lng) : null,
           referencia:    String(r.referencia || '').trim(),
-          fecha_ingreso: String(r.fecha_ingreso || '').trim() || null,
+          fecha_ingreso: r.fecha_ingreso ? (() => {
+  const v = r.fecha_ingreso
+  if (typeof v === 'number') {
+    const d = new Date((v - 25569) * 86400 * 1000)
+    return d.toISOString().slice(0, 10)
+  }
+  return String(v).trim() || null
+})() : null,
         })).filter(r => r.dni && r.nombre)
         const { error } = await supabase.from('tripulantes').upsert(filas, { onConflict: 'dni' })
         if (error) { setMensajeCarga('❌ Error: ' + error.message) }
@@ -155,7 +162,7 @@ const fileInputRef = useRef(null)
             <input type="file" accept=".xlsx,.xls" onChange={handleCargarExcel} style={{ display: 'none' }} ref={fileInputRef} />
           </label>
           <button
-            onClick={() => { setShowForm(!showForm); setEditando(null); setForm({ dni: '', nombre: '', apellido: '', cargo: '', correo: '', telefono: '', direccion: '', distrito: '', zona_distrito: '', lat: '', lng: '', referencia: '', fecha_ingreso: '' }) }}
+            onClick={() => { setShowForm(!showForm); setEditando(null); setForm({ dni: '', nombre: '', cargo: '', correo: '', telefono: '', direccion: '', distrito: '', zona_distrito: '', lat: '', lng: '', referencia: '', fecha_ingreso: '' }) }}
             style={{ padding: '8px 18px', background: '#00b4d8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
             {showForm && !editando ? 'Cancelar' : '+ Nuevo Tripulante'}
           </button>
