@@ -431,6 +431,8 @@ function Carga() {
     })
 // JZ7800 → crear automáticamente salida JZ7801 fecha+2
     const filasExtra = []
+    console.log('Buscando JZ7800 en', filasProcesadas.length, 'filas')
+    console.log('Vuelos E:', [...new Set(filasProcesadas.filter(f=>f.col4_es==='E').map(f=>f.col9_vuelo))])
     filasProcesadas.forEach(f => {
       if (f.col4_es === 'E' && (f.col9_vuelo||'').toUpperCase() === 'JZ7800') {
         const fechaS801 = new Date(fechaSig)
