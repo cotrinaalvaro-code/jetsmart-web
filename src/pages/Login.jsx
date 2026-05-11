@@ -150,7 +150,16 @@ function Login() {
         padding: '48px', color: 'white'
       }}>
         <div style={{ maxWidth: '400px', textAlign: 'center' }}>
-          <div style={{ fontSize: '72px', marginBottom: '24px' }}>✈</div>
+          <div style={{ fontSize: '72px', marginBottom: '24px', animation: 'volar 3s ease-in-out infinite' }}>✈</div>
+<style>{`
+  @keyframes volar {
+    0%   { transform: translateX(-10px) translateY(0px) rotate(-5deg); }
+    25%  { transform: translateX(5px)  translateY(-12px) rotate(2deg); }
+    50%  { transform: translateX(10px) translateY(0px) rotate(5deg); }
+    75%  { transform: translateX(5px)  translateY(12px) rotate(2deg); }
+    100% { transform: translateX(-10px) translateY(0px) rotate(-5deg); }
+  }
+`}</style>
           <h2 style={{ fontSize: '30px', fontWeight: '800', margin: '0 0 8px', lineHeight: '1.2', color: 'white' }}>
             Rutas Crew
           </h2>
