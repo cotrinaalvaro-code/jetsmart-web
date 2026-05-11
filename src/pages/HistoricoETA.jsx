@@ -107,17 +107,21 @@ function HistoricoETA() {
       supabase.from('eta_n0b').select('*', { count: 'exact', head: true }),
       supabase.from('eta_tomtom').select('*', { count: 'exact', head: true }),
     ])
-    const { data: fechas } = await supabase.from('historico')
-      .select('fecha').order('fecha', { ascending: true }).limit(1)
-    const { data: fechasMax } = await supabase.from('historico')
-      .select('fecha').order('fecha', { ascending: false }).limit(1)
+    const { data: todasFechas } = await supabase.from('historico').select('fecha')
+const fechasOrdenadas = (todasFechas||[])
+  .map(r => r.fecha)
+  .filter(f => f && f.includes('/'))
+  .map(f => { const [d,m,y] = f.split('/'); return { str: f, num: parseInt(y+m+d) } })
+  .sort((a,b) => a.num - b.num)
+const fechaMin = fechasOrdenadas[0]?.str || '—'
+const fechaMax = fechasOrdenadas[fechasOrdenadas.length-1]?.str || '—'
     setStats({
       historico: cntHist || 0,
       n0a: cntN0A || 0,
       n0b: cntN0B || 0,
       tomtom: cntTT || 0,
-      fechaMin: fechas?.[0]?.fecha || '—',
-      fechaMax: fechasMax?.[0]?.fecha || '—',
+      fechaMin,
+fechaMax,
     })
   }
 
