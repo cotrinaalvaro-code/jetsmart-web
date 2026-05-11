@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 
 const COLORES_CORREDOR = {
@@ -36,6 +37,8 @@ function Corredores() {
   const [showFormZona, setShowFormZona] = useState(false)
   const [showFormCompat, setShowFormCompat] = useState(false)
   const [mensaje, setMensaje] = useState('')
+  const fileInputRefCompat = useRef(null)
+  const [mensajeCompat, setMensajeCompat] = useState('')
 
   const fetchData = async () => {
     setLoading(true)
@@ -55,7 +58,6 @@ function Corredores() {
     setTimeout(() => setMensaje(''), 3000)
   }
 
-  // ZONAS
   const guardarZona = async () => {
     if (!formZona.zona || !formZona.corredor) return
     if (editando) {
@@ -83,7 +85,6 @@ function Corredores() {
     fetchData()
   }
 
-  // COMPATIBILIDAD
   const guardarCompat = async () => {
     if (!formCompat.corredor_a || !formCompat.corredor_b) return
     await supabase.from('corredores_compat').insert([formCompat])
@@ -99,16 +100,51 @@ function Corredores() {
     fetchData()
   }
 
-  const corredoresUnicos = [...new Set(zonas.map(z => z.corredor))].sort()
+  const descargarPlantillaCompat = () => {
+    const headers = ['corredor_a', 'corredor_b', 'franja']
+    const ejemplo = [
+      ['COSTA VERDE', 'SAN MIGUEL', ''],
+      ['NORTE 1', 'NORTE 2', 'VALLE'],
+      ['CALLAO 1', 'CALLAO 2', 'PUNTA'],
+    ]
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...ejemplo])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Compatibilidad')
+    XLSX.writeFile(wb, 'Plantilla_Compatibilidad.xlsx')
+  }
 
+  const handleCargarCompat = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (fileInputRefCompat.current) fileInputRefCompat.current.value = ''
+    setMensajeCompat('Leyendo Excel...')
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        const filas = rows.map(r => ({
+          corredor_a: String(r.corredor_a || '').trim().toUpperCase(),
+          corredor_b: String(r.corredor_b || '').trim().toUpperCase(),
+          franja:     String(r.franja || '').trim().toUpperCase(),
+        })).filter(r => r.corredor_a && r.corredor_b)
+        if (filas.length === 0) { setMensajeCompat('❌ No se encontraron datos válidos'); return }
+        const { error } = await supabase.from('corredores_compat').upsert(filas, { onConflict: 'corredor_a,corredor_b' })
+        if (error) setMensajeCompat('❌ Error: ' + error.message)
+        else { setMensajeCompat(`✅ ${filas.length} pares cargados`); fetchData() }
+      } catch (err) { setMensajeCompat('❌ Error: ' + err.message) }
+    }
+    reader.readAsBinaryString(file)
+  }
+
+  const corredoresUnicos = [...new Set(zonas.map(z => z.corredor))].sort()
   const zonasFiltradas = zonas.filter(z =>
     `${z.zona} ${z.corredor}`.toLowerCase().includes(busqueda.toLowerCase())
   )
   const compatFiltrados = compat.filter(c =>
     `${c.corredor_a} ${c.corredor_b}`.toLowerCase().includes(busqueda.toLowerCase())
   )
-
-  // Agrupar zonas por corredor
   const zonasPorCorredor = {}
   zonasFiltradas.forEach(z => {
     if (!zonasPorCorredor[z.corredor]) zonasPorCorredor[z.corredor] = []
@@ -144,10 +180,20 @@ function Corredores() {
             </button>
           )}
           {tab === 'compat' && (
-            <button onClick={() => setShowFormCompat(!showFormCompat)}
-              style={{ padding: '7px 16px', background: '#00b4d8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-              {showFormCompat ? 'Cancelar' : '+ Nuevo Par'}
-            </button>
+            <>
+              <button onClick={descargarPlantillaCompat}
+                style={{ padding: '7px 16px', background: 'white', color: '#2e7d32', border: '1px solid #2e7d32', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                📥 Plantilla
+              </button>
+              <label style={{ padding: '7px 16px', background: '#f57f17', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                📤 Cargar Excel
+                <input type="file" accept=".xlsx,.xls" onChange={handleCargarCompat} style={{ display: 'none' }} ref={fileInputRefCompat} />
+              </label>
+              <button onClick={() => setShowFormCompat(!showFormCompat)}
+                style={{ padding: '7px 16px', background: '#00b4d8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                {showFormCompat ? 'Cancelar' : '+ Nuevo Par'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -166,6 +212,13 @@ function Corredores() {
           }}>{t.label}</button>
         ))}
       </div>
+
+      {/* Mensaje compatibilidad */}
+      {tab === 'compat' && mensajeCompat && (
+        <div style={{ padding: '8px 24px', background: mensajeCompat.includes('❌') ? '#fff5f5' : '#f1f8e9', borderBottom: '1px solid #e0e0e0', color: mensajeCompat.includes('❌') ? '#c62828' : '#2e7d32', fontSize: '13px', fontWeight: '600' }}>
+          {mensajeCompat}
+        </div>
+      )}
 
       {/* Formulario Zona */}
       {tab === 'zonas' && showFormZona && (
@@ -249,8 +302,6 @@ function Corredores() {
         <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>Cargando...</div>
       ) : (
         <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 160px)' }}>
-
-          {/* TAB ZONAS — agrupado por corredor */}
           {tab === 'zonas' && (
             <div style={{ padding: '16px 24px' }}>
               {Object.entries(zonasPorCorredor).map(([corredor, zonasList]) => {
@@ -258,7 +309,6 @@ function Corredores() {
                 const esLineal = zonasList.some(z => z.tipo === 'LINEAL')
                 return (
                   <div key={corredor} style={{ marginBottom: '20px', border: '1px solid #e0e0e0', borderRadius: '10px', overflow: 'hidden' }}>
-                    {/* Header corredor */}
                     <div style={{ padding: '10px 16px', background: color, display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '14px', fontWeight: '800', color: 'white' }}>{corredor}</span>
                       {esLineal && (
@@ -266,7 +316,6 @@ function Corredores() {
                       )}
                       <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>{zonasList.length} zona{zonasList.length !== 1 ? 's' : ''}</span>
                     </div>
-                    {/* Zonas */}
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: '#fafafa' }}>
@@ -300,7 +349,6 @@ function Corredores() {
             </div>
           )}
 
-          {/* TAB COMPATIBILIDAD */}
           {tab === 'compat' && (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
