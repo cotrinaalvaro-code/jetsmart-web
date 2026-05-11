@@ -83,7 +83,7 @@ const fileInputRef = useRef(null)
   const [mensajeCarga, setMensajeCarga] = useState('')
 
   const descargarPlantilla = () => {
-    const headers = ['dni','nombre','apellido','cargo','correo','telefono','direccion','distrito','zona_distrito','lat','lng','referencia','fecha_ingreso']
+   const headers = ['dni','nombre','fecha_ingreso','cargo','direccion','lat','lng','referencia','distrito','zona_distrito','telefono','correo']
     const ws = XLSX.utils.aoa_to_sheet([headers])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Tripulantes')
