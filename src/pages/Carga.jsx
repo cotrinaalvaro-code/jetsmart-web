@@ -408,7 +408,7 @@ function Carga() {
 
       if (grupo.fltS) {
   let fechaS = new Date(fechaSig)
-  const vueloS = (grupo.fltS || '').toUpperCase()
+  const vueloS = (grupo.fltS || '').toUpperCase().replace(/\s+/g,'')
   if (vueloS === 'JZ7730') {
     fechaS.setDate(fechaS.getDate() + 1)
   } else if (vueloS !== 'JZ7801') {
