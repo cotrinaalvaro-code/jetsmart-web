@@ -57,7 +57,6 @@ const iconoATO = L.divIcon({
 
 function MapaPage() {
   const [vuelosRevisados, setVuelosRevisados] = useState(new Set())
-  const [hatosRevisados, setHatosRevisados] = useState(new Set())
   const [datos, setDatos] = useState([])
   const [filtroVuelo, setFiltroVuelo] = useState('TODOS')
   const [filtroES, setFiltroES] = useState('TODOS')
@@ -256,24 +255,6 @@ function MapaPage() {
     setMoverDesde(null)
   }
 
-  const toggleRevisadoVuelo = () => {
-    setVuelosRevisados(prev => {
-      const nuevo = new Set(prev)
-      if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
-      else nuevo.add(filtroVuelo)
-      return nuevo
-    })
-  }
-
-  const toggleRevisadoHato = () => {
-    setHatosRevisados(prev => {
-      const nuevo = new Set(prev)
-      if (nuevo.has(filtroHATO)) nuevo.delete(filtroHATO)
-      else nuevo.add(filtroHATO)
-      return nuevo
-    })
-  }
-
   // FO global
   const activosE = datos.filter(d => d.activo && d.col23_grupo && d.col4_es === 'E')
   const gruposE = [...new Set(activosE.map(d => d.col23_grupo))]
@@ -293,18 +274,12 @@ function MapaPage() {
     return { label: 'Punta PM 🔴', bg: '#ffebee', color: '#c62828' }
   })()
 
-  const checkStyle = (revisado) => ({
-    display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer',
-    background: revisado ? '#e8f5e9' : '#f5f5f5',
-    border: `1px solid ${revisado ? '#2e7d32' : '#ddd'}`,
-    borderRadius: 20, padding: '3px 8px',
-    color: revisado ? '#2e7d32' : '#555', fontWeight: 600
-  })
-
   const selectStyle = { padding: '4px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', color: '#333', background: 'white', cursor: 'pointer' }
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'white', flexDirection: 'column' }}>
+
+      {/* Header */}
       <div style={{ padding: '7px 16px', borderBottom: '1px solid #e0e0e0', background: 'white' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ minWidth: '110px' }}>
@@ -331,10 +306,18 @@ function MapaPage() {
               {vuelosUnicos.map(v => <option key={v} value={v}>{vuelosRevisados.has(v) ? '✓ ' : ''}{v}</option>)}
             </select>
 
+            {/* Check revisado junto al filtro de vuelo */}
             {filtroVuelo !== 'TODOS' && (
-              <label style={checkStyle(vuelosRevisados.has(filtroVuelo))}>
-                <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={toggleRevisadoVuelo} />
-                ✓ {filtroVuelo}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', background: vuelosRevisados.has(filtroVuelo) ? '#e8f5e9' : '#f5f5f5', border: `1px solid ${vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#ddd'}`, borderRadius: 20, padding: '3px 8px', color: vuelosRevisados.has(filtroVuelo) ? '#2e7d32' : '#555', fontWeight: 600 }}>
+                <input type="checkbox" checked={vuelosRevisados.has(filtroVuelo)} onChange={() => {
+                  setVuelosRevisados(prev => {
+                    const nuevo = new Set(prev)
+                    if (nuevo.has(filtroVuelo)) nuevo.delete(filtroVuelo)
+                    else nuevo.add(filtroVuelo)
+                    return nuevo
+                  })
+                }} />
+                ✓ Rev.
               </label>
             )}
 
@@ -362,15 +345,8 @@ function MapaPage() {
               }
             }}>
               <option value="TODOS">Todos</option>
-              {hatosUnicos.map(h => <option key={h} value={h}>{hatosRevisados.has(h) ? '✓ ' : ''}{h}</option>)}
+              {hatosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
             </select>
-
-            {filtroHATO !== 'TODOS' && (
-              <label style={checkStyle(hatosRevisados.has(filtroHATO))}>
-                <input type="checkbox" checked={hatosRevisados.has(filtroHATO)} onChange={toggleRevisadoHato} />
-                ✓ {filtroHATO}
-              </label>
-            )}
 
             <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>Prov.:</span>
             <select style={selectStyle} value={filtroProv} onChange={e => { setFiltroProv(e.target.value); setMoverDesde(null) }}>
@@ -385,12 +361,10 @@ function MapaPage() {
 
           <div style={{ flex: 1 }} />
 
-          {/* FO Global */}
+          {/* FO Global + Franja juntos */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: foBg, border: `1px solid ${foColor}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: foColor }}>
             🚐 {foStr} pax/grp
           </div>
-
-          {/* Franja horaria */}
           {franjaActual && (
             <div style={{ background: franjaActual.bg, color: franjaActual.color, border: `1px solid ${franjaActual.color}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
               {franjaActual.label}
@@ -401,6 +375,7 @@ function MapaPage() {
         </div>
       </div>
 
+      {/* Aviso mover */}
       {moverDesde && (
         <div style={{ padding: '6px 16px', background: '#fff8e1', borderBottom: '1px solid #ffd54f', fontSize: '12px', color: '#f57f17', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span>⚡ Moviendo: <strong>{moverDesde.nombre}</strong> — Selecciona grupo destino en el panel</span>
@@ -409,7 +384,10 @@ function MapaPage() {
         </div>
       )}
 
+      {/* Contenido */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+        {/* Panel lateral */}
         <div style={{ width: '300px', borderRight: '1px solid #e0e0e0', overflowY: 'auto', background: 'white', flexShrink: 0 }}>
           {gruposFiltrados.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: '#888', fontSize: '13px' }}>
@@ -494,6 +472,7 @@ function MapaPage() {
           )}
         </div>
 
+        {/* Mapa */}
         <div style={{ flex: 1 }}>
           <MapContainer center={[ATO_LAT, ATO_LNG]} zoom={hayFiltroActivo ? 12 : 11}
             style={{ width: '100%', height: '100%' }} key={filtroVuelo + filtroES + filtroProv + filtroHATO}>
