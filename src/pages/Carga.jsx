@@ -232,7 +232,8 @@ function Carga() {
           const nuevoDatos = JSON.parse(e.newValue)
           if (nuevoDatos) {
             const ordenados = sortearDatos(nuevoDatos)
-            setDatos(ordenados)
+const conNumeros = numerarServ(ordenados)
+setDatos(conNumeros)
             // Recalcular resumen con los nuevos datos
             const resumen = calcularResumen(ordenados.map(r => ({
               es: r.col4_es, vuelo: r.col9_vuelo, pax: r.col7_pax,
