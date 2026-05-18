@@ -288,9 +288,10 @@ export const calcularETA = async (filas, onProgress) => {
         .sort((a,b)=>parseInt(a.col24_orden)-parseInt(b.col24_orden))
       const dniServicio = miembrosServ.map(m=>extraerDNI(m.col14_nombres,m.col1_dni))
 
+      
       // Calcular ETA total — igual que bloque "tt = 0" en VBA
-      let tt = dniServicio.length > 0 ? 4 : 0
-let tAcum = dniServicio.length > 0 ? 4 : 0
+      let tt = dniServicio.length > 1 ? 4 : 0
+let tAcum = dniServicio.length > 1 ? 4 : 0
       let nivelTmp = 'N25'
 
       onProgress?.(`Calculando ETA... servicio ${serv}`)
