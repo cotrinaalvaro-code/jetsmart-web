@@ -288,7 +288,7 @@ export const calcularETA = async (filas, onProgress) => {
         .sort((a,b)=>parseInt(a.col24_orden)-parseInt(b.col24_orden))
       const dniServicio = miembrosServ.map(m=>extraerDNI(m.col14_nombres,m.col1_dni))
 
-      
+
       // Calcular ETA total — igual que bloque "tt = 0" en VBA
       let tt = dniServicio.length > 1 ? 4 : 0
 let tAcum = dniServicio.length > 1 ? 4 : 0
@@ -309,10 +309,8 @@ if (dniServicio.length>0) {
   const hSalT = sumarMin(hRealServ||'00:00', tAcum)
   const {min,nivel} = await buscarTramo(dniServicio[dniServicio.length-1],'AEROPUERTO',franjaServ,diaServ,grupoDiaServ,esServ,hSalT)
   tt+=min+4; nivelTmp=nivel
-  console.log('tt final:', tt, 'min ultimo tramo:', min)
 }
         // H.REAL = H.ATO - ETA total (igual que macro)
-         console.log(`tt TOTAL=${tt} hato=${hato} hRealServ esperado=${restarMin(hato, Math.round(tt))}`)
         hRealServ = restarMin(hato, Math.round(tt))
       } else {
         // S: AEROPUERTO→DNI[0]
@@ -324,7 +322,6 @@ if (dniServicio.length>0) {
         for (let ii=0; ii<dniServicio.length-1; ii++) {
   const hSalT = sumarMin(hato, tAcum)
   const {min,nivel} = await buscarTramo(dniServicio[ii],dniServicio[ii+1],franjaServ,diaServ,grupoDiaServ,esServ,hSalT)
-  console.log(`Tramo ${ii}: ${dniServicio[ii]}→${dniServicio[ii+1]} min=${min} +4=${min+4}`)
   tt+=min+4; tAcum+=min+4; nivelTmp=nivel
 }
         hRealServ = hato
