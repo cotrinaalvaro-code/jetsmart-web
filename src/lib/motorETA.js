@@ -351,7 +351,7 @@ if (dniServicio.length>0) {
     } else {
       // Fila del mismo servicio — igual que bloque Else en VBA
       const {min:deltaMin} = await buscarTramo(dniAnterior,dniActual,franjaServ,diaServ,grupoDiaServ,esServ,'')
-      const hRecActual = sumarMin(hRecAnterior, Math.round(deltaMin))
+      const hRecActual = sumarMin(hRecAnterior, Math.round(deltaMin) + 4)
       
       resultado[fi].col6_hreal = hRealServ
       resultado[fi].col11_hrec = hRecActual
