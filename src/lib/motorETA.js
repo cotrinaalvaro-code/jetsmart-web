@@ -308,6 +308,7 @@ if (dniServicio.length>0) {
   const hSalT = sumarMin(hRealServ||'00:00', tAcum)
   const {min,nivel} = await buscarTramo(dniServicio[dniServicio.length-1],'AEROPUERTO',franjaServ,diaServ,grupoDiaServ,esServ,hSalT)
   tt+=min+4; nivelTmp=nivel
+  console.log('tt final:', tt, 'min ultimo tramo:', min)
 }
         // H.REAL = H.ATO - ETA total (igual que macro)
         hRealServ = restarMin(hato, Math.round(tt))
