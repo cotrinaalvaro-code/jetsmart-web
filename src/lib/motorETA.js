@@ -303,19 +303,20 @@ export const calcularETA = async (filas, onProgress) => {
   tt+=min+4; tAcum+=min+4; nivelTmp=nivel
 }
         // Último DNI→AEROPUERTO
-        if (dniServicio.length>0) {
-          const hSalT = sumarMin(hRealServ||'00:00', tAcum)
-          const {min,nivel} = await buscarTramo(dniServicio[dniServicio.length-1],'AEROPUERTO',franjaServ,diaServ,grupoDiaServ,esServ,hSalT)
-          tt+=min; nivelTmp=nivel
-        }
+        // Último DNI→AEROPUERTO
+if (dniServicio.length>0) {
+  const hSalT = sumarMin(hRealServ||'00:00', tAcum)
+  const {min,nivel} = await buscarTramo(dniServicio[dniServicio.length-1],'AEROPUERTO',franjaServ,diaServ,grupoDiaServ,esServ,hSalT)
+  tt+=min+4; nivelTmp=nivel
+}
         // H.REAL = H.ATO - ETA total (igual que macro)
         hRealServ = restarMin(hato, Math.round(tt))
       } else {
         // S: AEROPUERTO→DNI[0]
         if (dniServicio.length>0) {
-          const {min,nivel} = await buscarTramo('AEROPUERTO',dniServicio[0],franjaServ,diaServ,grupoDiaServ,esServ,hato)
-          tt+=min; tAcum=min; nivelTmp=nivel
-        }
+  const {min,nivel} = await buscarTramo('AEROPUERTO',dniServicio[0],franjaServ,diaServ,grupoDiaServ,esServ,hato)
+  tt+=min+4; tAcum=min+4; nivelTmp=nivel
+}
         // DNI[i]→DNI[i+1]
         for (let ii=0; ii<dniServicio.length-1; ii++) {
   const hSalT = sumarMin(hato, tAcum)
